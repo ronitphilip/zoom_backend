@@ -1,18 +1,11 @@
 import { Request, Response } from 'express';
-import { loginUser, registerUser } from '../service/user.service';
+import { fetchAllUsers, fetchUserByIdAndUpdate, loginUser, registerUser } from '../service/user.service';
+import { RegisterRequestBody, LoginRequestBody, UserAttributes, AddRoleRequestBody } from '../type/user.type';
+import { generateToken } from '../utils/jwt';
 
-interface RegisterRequestBody {
-    name: string;
-    email: string;
-    password: string;
-}
-
-interface LoginRequestBody {
-    email: string;
-    password: string;
-}
-
+// register
 export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: Response) => {
+    console.log('register');
     try {
         const { name, email, password } = req.body;
 
@@ -21,18 +14,17 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
         }
 
         const user = await registerUser(name, email, password);
-        res.status(201).json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            createdAt: user.createdAt
-        });
+
+        const token = generateToken({ id: user.id, email: user.email, name: user.name });
+        res.status(201).json({ token });
     } catch (err) {
         throw err;
     }
 };
 
+// login
 export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
+    console.log('login');
     try {
         const { email, password } = req.body;
 
@@ -41,12 +33,36 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
         }
 
         const user = await loginUser(email, password);
-        res.status(200).json({
-            id: user.id,
-            name: user.name,
-            email: user.email
-        });
+
+        const token = generateToken({ id: user.id, email: user.email, name: user.name });
+        res.status(200).json({ token });
     } catch (err) {
-        throw err; // Let errorHandler middleware handle the error
+        throw err;
     }
 };
+
+// fetch all users
+export const allUsers = async (req: Request, res: Response<UserAttributes[]>) => {
+    console.log('allUsers');
+    try {
+        const users = await fetchAllUsers();
+
+        res.status(200).json(users);
+    } catch (err) {
+        throw err;
+    }
+}
+
+// add role to a user
+export const addRole = async (req: Request<{}, {}, AddRoleRequestBody>, res: Response) => {
+    console.log('addRole');
+
+    try {
+        const { userId, roleId } = req.body;
+        
+        const roleAssigned = await fetchUserByIdAndUpdate(userId, roleId);
+        res.status(200).json(roleAssigned);
+    } catch (err) {
+        throw err;
+    }
+}
