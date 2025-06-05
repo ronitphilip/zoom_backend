@@ -1,11 +1,10 @@
-import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, NonAttribute, BelongsToManySetAssociationsMixin } from 'sequelize';
-import { Permission } from './permission.model';
+import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { Permissions } from '../type/role.type';
 
 export class Role extends Model<InferAttributes<Role>, InferCreationAttributes<Role>> {
     declare id: CreationOptional<number>;
     declare role: string;
-    declare permissions?: NonAttribute<Permission[]>;
-    declare setPermissions: BelongsToManySetAssociationsMixin<Permission, number>;
+    declare permissions: Permissions;
 }
 
 export const initRoleModel = (sequelize: Sequelize) => {
@@ -18,8 +17,12 @@ export const initRoleModel = (sequelize: Sequelize) => {
             },
             role: {
                 type: DataTypes.STRING,
-                allowNull: false,
+                allowNull: true,
                 unique: true,
+            },
+            permissions: {
+                type: DataTypes.JSONB,
+                allowNull: true
             }
         },
         {

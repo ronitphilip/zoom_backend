@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { addPermission, createRole, assignPermissionsToRole } from '../controller/role.controller';
 import { authenticate } from '../middleware/auth';
+import { addPermissions, assignRole, createRole, fetchRole } from '../controller/role.controller';
 
 const roleRouter = Router();
 
-roleRouter.post('/create-role',authenticate, createRole);
-roleRouter.post('/create-permission',authenticate, addPermission);
-roleRouter.post('/assign-permission',authenticate, assignPermissionsToRole);
+roleRouter.post('/create-role', authenticate, createRole);
+roleRouter.patch('/add-permissions', authenticate, addPermissions);
+roleRouter.patch('/add-role', authenticate, assignRole);
+roleRouter.get('/fetch-role/:roleId', authenticate, fetchRole);
 
 export default roleRouter;

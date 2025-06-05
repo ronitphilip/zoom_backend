@@ -1,16 +1,16 @@
-export interface addPermissionRequestBody {
-    name: string;
+import { UserAttributes } from "./user.type";
+
+export interface Permissions {
+    [key: string]: string[];
 }
 
-export interface createRoleRequestBody {
+export interface RoleAttributes {
+    id?: number;
     role: string;
+    permissions: Permissions;
 }
 
-export interface permissionsToRoleRequestBody {
-    roleId: number;
-    permissionIds: number[];
-}
-
-export interface ResponseBody {
+export interface RoleResponseBody {
     success: boolean;
+    data: RoleAttributes | UserAttributes;
 }

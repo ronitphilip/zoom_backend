@@ -1,65 +1,73 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
+import { RoleResponseBody, RoleAttributes } from '../type/role.type';
+import { addRole, createNewRole, updatePermission } from '../service/role.service';
 import { Role } from '../model/role.model';
-import { Permission } from '../model/permission.model';
-import { addPermissionRequestBody, createRoleRequestBody, permissionsToRoleRequestBody, ResponseBody } from '../type/role.type';
 
-// add new permission
-export const addPermission = async (req: Request<{}, {}, addPermissionRequestBody>, res: Response<ResponseBody>) => {
-    console.log('addPermission');
+export const createRole = async (req: Request<{}, {}, RoleAttributes>, res: Response<RoleResponseBody>, next: NextFunction) => {
+    console.log('createRole');
 
     try {
-        const { name } = req.body;
-        if (!name) throw Object.assign(new Error('Permission name is required'), { status: 400 });
+        const { role, permissions } = req.body;
 
-        const newPermission = await Permission.create({ name });
-        res.status(201).json({success : true});
+        if (!role || !permissions) {
+            return next(Object.assign(new Error('Role name and permissions are required!'), { status: 400 }));
+        }
+
+        const newRole = await createNewRole(role, permissions)
+
+        res.status(201).json({success: true, data: newRole})
     } catch (err) {
-        throw err;
+        next(err);
     }
 }
 
-// create new role for user
-export const createRole = async (req: Request<{}, {}, createRoleRequestBody>, res: Response<ResponseBody>) => {
-    console.log('createRole');
+export const addPermissions = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
+    console.log('addPermissions');
     try {
-        const { role } = req.body;
-        if (!role) throw Object.assign(new Error('Role is required'), { status: 400 });
+        const { roleId, permissions } = req.body;
 
-        const newRole = await Role.create({ role });
-        res.status(201).json({success : true});
-    } catch (err) {
-        throw err;
+    if (!roleId || !permissions) {
+      return next(Object.assign(new Error('Role and permissions are required'), { status: 400 }));
     }
-};
 
-// assign permissions to a role
-export const assignPermissionsToRole = async (req: Request<{}, {}, permissionsToRoleRequestBody>, res: Response<ResponseBody>) => {
+    const role = await updatePermission(roleId, permissions)
+
+    res.status(200).json({ success: true, data: role });
+
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const assignRole = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
+    console.log('assignRole');
     try {
-        const { roleId, permissionIds } = req.body;
+        const { userId, roleId } = req.body;
 
-        if (!roleId || !Array.isArray(permissionIds)) {
-            throw Object.assign(new Error('roleId and permissionIds (array) are required'), { status: 400 });
-        }
-
-        const role = await Role.findByPk(roleId);
-        if (!role) throw Object.assign(new Error('Role not found'), { status: 404 });
-
-        const permissions = await Permission.findAll({
-            where: { id: permissionIds }
-        });
-
-        if (permissions.length !== permissionIds.length) {
-            throw Object.assign(new Error('Some permissions not found'), { status: 400 });
-        }
-
-        await role.setPermissions(permissions);
-        const updatedRoleWithPermissions = await Role.findByPk(roleId, {
-            include: ['permissions']
-        });
-
-        res.status(200).json({success : true});
-    } catch (err) {
-        throw err;
+    if (!userId || !roleId) {
+      return next(Object.assign(new Error('User and Role are required'), { status: 400 }));
     }
-};
 
+    const user = await addRole(userId, roleId);
+
+    res.status(200).json({ success: true, data: user });
+  
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const fetchRole = async (req: Request<{roleId:string}, {}, {}>, res: Response, next: NextFunction) => {
+    console.log('fetchRole');
+    
+    try {
+        const { roleId } = req.params;
+        const role = await Role.findByPk(Number(roleId));
+
+        if(!role) return next(Object.assign(new Error('Role not found!'), { status: 404 }));
+
+        res.status(200).json(role)
+    } catch (err) {
+        next(err)
+    }
+}

@@ -1,6 +1,4 @@
-export interface RoleAttributes {
-  role: string;
-}
+import { RoleAttributes } from "./role.type";
 
 export interface UserAttributes {
   id: number;
@@ -10,7 +8,6 @@ export interface UserAttributes {
   role?: RoleAttributes | string;
   password?: string;
   createdAt?: Date;
-  updatedAt?: Date;
 }
 
 export interface RegisterRequestBody {
@@ -24,7 +21,8 @@ export interface LoginRequestBody {
   password: string;
 }
 
-export interface AddRoleRequestBody {
-  userId : number;
-  roleId : number;
+export interface UserResponseBody {
+  token?: string;
+  data?: UserAttributes;
+  success: boolean
 }

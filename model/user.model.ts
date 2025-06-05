@@ -1,15 +1,14 @@
-import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, ForeignKey, BelongsToSetAssociationMixin } from 'sequelize';
+import { Sequelize, DataTypes, Model, CreationOptional, ForeignKey } from 'sequelize';
 import { Role } from './role.model';
 
-export class User extends Model< InferAttributes<User>, InferCreationAttributes<User> > {
+export class User extends Model {
   declare id: CreationOptional<number>;
   declare name: string;
   declare email: string;
   declare password: string;
   declare roleId: ForeignKey<Role['id']>;
   declare createdAt: CreationOptional<Date>;
-  declare updatedAt: CreationOptional<Date>;
-  declare setRole: BelongsToSetAssociationMixin<Role, number>;
+  declare role?: Role;
 }
 
 export const initUserModel = (sequelize: Sequelize) => {
@@ -43,13 +42,15 @@ export const initUserModel = (sequelize: Sequelize) => {
         },
       },
       createdAt: DataTypes.DATE,
-      updatedAt: DataTypes.DATE,
     },
     {
       sequelize,
       modelName: 'User',
       tableName: 'users',
       timestamps: true,
+      defaultScope: {
+        attributes: { exclude: ['updatedAt'] },
+      },
     }
   );
 };
