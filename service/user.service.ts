@@ -32,6 +32,7 @@ export const loginUser = async (email: string, password: string): Promise<UserAt
 export const findAllUsers = async (): Promise<UserAttributes[]> => {
 
   const allUsers = await User.findAll({
+    attributes: { exclude: ['password', 'createdAt'] },
     include: [
       {
         model: Role,
@@ -42,16 +43,5 @@ export const findAllUsers = async (): Promise<UserAttributes[]> => {
   })
   if (!allUsers) throw Object.assign(new Error('User not found'), { status: 404 });
 
-  const users = allUsers.map((user) => {
-    const plain = user.toJSON() as UserAttributes;
-    return {
-      ...plain,
-      role: plain.role?.role || null,
-      roleId: undefined,
-      createdAt: undefined,
-      password: undefined
-    };
-  });
-
-  return users as UserAttributes[];
+  return allUsers as UserAttributes[];
 }
