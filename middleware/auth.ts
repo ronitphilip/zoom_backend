@@ -11,10 +11,11 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_KEY);
-    (req as any).user = payload;
+    jwt.verify(token, JWT_KEY);
+    // const payload = jwt.verify(token, JWT_KEY);
+    // (req as any).user = payload;
     next();
-  } catch (err) {
+  } catch {
     throw Object.assign(new Error('Invalid or expired token'), { status: 403 });
   }
 };

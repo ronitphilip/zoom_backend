@@ -43,7 +43,7 @@ export const findAllUsers = async (): Promise<UserAttributes[]> => {
   if (!allUsers) throw Object.assign(new Error('User not found'), { status: 404 });
 
   const users = allUsers.map((user) => {
-    const plain = user.toJSON() as any;
+    const plain = user.toJSON() as UserAttributes;
     return {
       ...plain,
       role: plain.role?.role || null,

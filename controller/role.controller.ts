@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { RoleResponseBody, RoleAttributes } from '../type/role.type';
+import { RoleResponseBody } from '../type/role.type';
 import { addRole, createNewRole, updatePermission } from '../service/role.service';
 import { Role } from '../model/role.model';
 
-export const createRole = async (req: Request<{}, {}, RoleAttributes>, res: Response<RoleResponseBody>, next: NextFunction) => {
+export const createRole = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
     console.log('createRole');
 
     try {
@@ -57,12 +57,12 @@ export const assignRole = async (req: Request, res: Response<RoleResponseBody>, 
     }
 }
 
-export const fetchRole = async (req: Request<{roleId:string}, {}, {}>, res: Response, next: NextFunction) => {
+export const fetchRole = async (req: Request, res: Response, next: NextFunction) => {
     console.log('fetchRole');
     
     try {
         const { roleId } = req.params;
-        const role = await Role.findByPk(Number(roleId));
+        const role = await Role.findByPk(roleId);
 
         if(!role) return next(Object.assign(new Error('Role not found!'), { status: 404 }));
 

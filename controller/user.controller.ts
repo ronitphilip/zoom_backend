@@ -4,7 +4,7 @@ import { RegisterRequestBody, LoginRequestBody, UserResponseBody, UserAttributes
 import { generateToken } from '../utils/jwt';
 
 // register
-export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: Response<UserResponseBody>, next: NextFunction) => {
+export const register = async (req: Request<RegisterRequestBody>, res: Response<UserResponseBody>, next: NextFunction) => {
     console.log('register');
     try {
         const { name, email, password } = req.body;
@@ -22,7 +22,7 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
 };
 
 // login
-export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response<UserResponseBody>, next: NextFunction) => {
+export const login = async (req: Request<LoginRequestBody>, res: Response<UserResponseBody>, next: NextFunction) => {
     console.log('login');
     try {
         const { email, password } = req.body;
