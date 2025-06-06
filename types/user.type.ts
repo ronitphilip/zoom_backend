@@ -5,9 +5,14 @@ export interface UserAttributes {
   name: string;
   email: string;
   roleId?: number;
-  role?: RoleAttributes | string;
+  role?: RoleAttributes | any;
   password?: string;
   createdAt?: Date;
+}
+
+export interface EncryptionResult {
+  iv: string;
+  encryptedData: string;
 }
 
 export interface RegisterRequestBody {
@@ -23,6 +28,6 @@ export interface LoginRequestBody {
 
 export interface UserResponseBody {
   token?: string;
-  data?: UserAttributes;
+  data?: UserAttributes | EncryptionResult;
   success: boolean
 }

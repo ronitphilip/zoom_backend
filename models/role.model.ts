@@ -1,5 +1,5 @@
 import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import { Permissions } from '../type/role.type';
+import { Permissions } from '../types/role.type';
 
 export class Role extends Model<InferAttributes<Role>, InferCreationAttributes<Role>> {
     declare id: CreationOptional<number>;

@@ -1,7 +1,7 @@
-import { Role } from "../model/role.model";
-import { User } from "../model/user.model";
-import { Permissions, RoleAttributes } from "../type/role.type";
-import { UserAttributes } from "../type/user.type";
+import { Role } from "../models/role.model";
+import { User } from "../models/user.model";
+import { Permissions, RoleAttributes } from "../types/role.type";
+import { UserAttributes } from "../types/user.type";
 
 export const createNewRole = async (role: string, permissions: Permissions): Promise<RoleAttributes> => {
 

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { RoleResponseBody } from '../type/role.type';
-import { addRole, createNewRole, updatePermission } from '../service/role.service';
-import { Role } from '../model/role.model';
+import { addRole, createNewRole, updatePermission } from '../services/role.service';
+import { Role } from '../models/role.model';
+import { RoleResponseBody } from '../types/role.type';
 
 export const createRole = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
     console.log('createRole');
@@ -61,7 +61,7 @@ export const fetchRole = async (req: Request, res: Response, next: NextFunction)
     console.log('fetchRole');
     
     try {
-        const { roleId } = req.params;
+        const { roleId } = (req as any).user;
         const role = await Role.findByPk(roleId);
 
         if(!role) return next(Object.assign(new Error('Role not found!'), { status: 404 }));

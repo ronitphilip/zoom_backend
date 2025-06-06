@@ -1,6 +1,6 @@
-import { Role } from '../model/role.model';
-import { User } from '../model/user.model';
-import { UserAttributes } from '../type/user.type';
+import { Role } from '../models/role.model';
+import { User } from '../models/user.model';
+import { UserAttributes } from '../types/user.type';
 import { hashPassword, comparePasswords } from '../utils/bcrypt';
 
 export const registerUser = async (name: string, email: string, password: string): Promise<UserAttributes> => {
@@ -17,7 +17,10 @@ export const registerUser = async (name: string, email: string, password: string
 };
 
 export const loginUser = async (email: string, password: string): Promise<UserAttributes> => {
-  const user = await User.findOne({where: { email }});
+  const user = await User.findOne({
+    where: { email },
+    include: [{ model: Role, as: 'role' }],
+  });
   if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
 
   const isMatch = await comparePasswords(password, user.password || '');
@@ -32,12 +35,12 @@ export const loginUser = async (email: string, password: string): Promise<UserAt
 export const findAllUsers = async (): Promise<UserAttributes[]> => {
 
   const allUsers = await User.findAll({
-    attributes: { exclude: ['password', 'createdAt'] },
+    attributes: { exclude: ['password'] },
     include: [
       {
         model: Role,
         as: 'role',
-        attributes: ['role'],
+        attributes: ['role', 'permissions'],
       },
     ],
   })
@@ -45,3 +48,25 @@ export const findAllUsers = async (): Promise<UserAttributes[]> => {
 
   return allUsers as UserAttributes[];
 }
+
+export const updateUserById = async (userId: number, updateBody: Partial<UserAttributes>): Promise<UserAttributes> => {
+  const user = await User.findByPk(userId);
+
+  if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+
+  const allowedUpdates: Partial<UserAttributes> = {
+    name: updateBody.name,
+    email: updateBody.email,
+    roleId: updateBody.roleId,
+  };
+
+  await user.update(allowedUpdates);
+
+  const updatedUser = await User.findByPk(userId, {
+    attributes: { exclude: ['password', 'updatedAt'] }
+  });
+
+  if (!updatedUser) throw Object.assign(new Error('Failed to retrieve updated user'), { status: 404 });
+
+  return updatedUser as UserAttributes;
+};
