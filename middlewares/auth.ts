@@ -29,18 +29,19 @@ export const verifyAdmin = (req: AuthenticatedRequest, res: Response, next: Next
   console.log("verifyAdmin");
 
   const authHeader = req.headers.authorization;
+  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw Object.assign(new Error('Token not found!'), { status: 409 });
+    return res.status(409).json({ success: false, error: 'Token not found!' });
   }
   const token = authHeader.split(' ')[1];
   try {
     const verified = jwt.verify(token, JWT_KEY) as { userId: number; role: string };
-
-    if (verified.role !== "admin") throw Object.assign(new Error('Unauthorized'), { status: 401 });
-
+    if (verified.role !== "admin") {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
     req.user = verified;
     next();
   } catch (err) {
-    res.status(400).json(err);
+    return res.status(400).json({ success: false, error: 'Invalid token' });
   }
 };

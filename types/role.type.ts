@@ -12,5 +12,5 @@ export interface RoleAttributes {
 
 export interface RoleResponseBody {
     success: boolean;
-    data: RoleAttributes | UserAttributes;
+    data?: RoleAttributes | UserAttributes | RoleAttributes[];
 }

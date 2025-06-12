@@ -28,6 +28,6 @@ export interface LoginRequestBody {
 
 export interface UserResponseBody {
   token?: string;
-  data?: UserAttributes | EncryptionResult;
+  data?: UserAttributes | EncryptionResult | UserAttributes[];
   success: boolean
 }

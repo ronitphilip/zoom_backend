@@ -71,3 +71,41 @@ export const fetchRole = async (req: Request, res: Response, next: NextFunction)
         next(err)
     }
 }
+
+export const fetchAllRoles = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
+    console.log('fetchAllRoles');
+    
+    try {
+        const role = await Role.findAll()
+
+        if(!role) return next(Object.assign(new Error('No role found!'), { status: 404 }));
+
+        res.status(200).json({success: true, data: role})
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const deleteRole = async (req: Request, res: Response<RoleResponseBody>, next: NextFunction) => {
+    console.log('deleteRole');
+
+    try {
+        const { roleId } = req.body;
+
+        if (!roleId) {
+            return next(Object.assign(new Error('Role ID is required'), { status: 400 }));
+        }
+
+        const deletedCount = await Role.destroy({
+            where: { id: roleId }
+        });
+
+        if (deletedCount === 0) {
+            return next(Object.assign(new Error('Role not found or already deleted'), { status: 404 }));
+        }
+
+        res.status(200).json({ success: true });
+    } catch (err) {
+        next(err);
+    }
+};

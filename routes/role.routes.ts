@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth';
-import { addPermissions, assignRole, createRole, fetchRole } from '../controllers/role.controller';
+import { authenticate, verifyAdmin } from '../middlewares/auth';
+import { addPermissions, assignRole, createRole, deleteRole, fetchAllRoles, fetchRole } from '../controllers/role.controller';
 
 const roleRouter = Router();
 
@@ -8,5 +8,7 @@ roleRouter.post('/create-role', authenticate, createRole);
 roleRouter.patch('/add-permissions', authenticate, addPermissions);
 roleRouter.patch('/add-role', authenticate, assignRole);
 roleRouter.get('/fetch-role', authenticate, fetchRole);
+roleRouter.get('/all-roles', authenticate, fetchAllRoles);
+roleRouter.delete('/delete', verifyAdmin, deleteRole);
 
 export default roleRouter;

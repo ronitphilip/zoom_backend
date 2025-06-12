@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { findAllUsers, loginUser, registerUser, updateUserById } from '../services/user.service';
-import { RegisterRequestBody, LoginRequestBody, UserResponseBody, UserAttributes, EncryptionResult } from '../types/user.type';
+import { RegisterRequestBody, LoginRequestBody, UserResponseBody } from '../types/user.type';
 import { generateToken } from '../utils/jwt';
 import { encryptRole } from '../utils/crypto';
 import { User } from '../models/user.model';
@@ -9,13 +9,13 @@ import { User } from '../models/user.model';
 export const register = async (req: Request<RegisterRequestBody>, res: Response<UserResponseBody>, next: NextFunction) => {
     console.log('register');
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, roleId } = req.body;
 
-        if (!name || !email || !password) {
+        if (!name || !email) {
             return next(Object.assign(new Error('Missing required fields'), { status: 400 }));
         }
 
-        const user = await registerUser(name, email, password);
+        const user = await registerUser(name, email, password, roleId);
 
         res.status(201).json({ success: true, data: user });
     } catch (err) {
@@ -35,8 +35,8 @@ export const login = async (req: Request<LoginRequestBody>, res: Response<UserRe
 
         const user = await loginUser(email, password);
 
-        const token = generateToken({ id: user.id, roleId: user?.roleId });
-        const encrypted = encryptRole(user.role?.role);
+        const token = generateToken({ id: user.id, role: user?.role?.role });
+        const encrypted = encryptRole(user.role);
         res.status(200).json({ success: true, token: token, data: encrypted });
     } catch (err) {
         next(err);
@@ -44,13 +44,13 @@ export const login = async (req: Request<LoginRequestBody>, res: Response<UserRe
 };
 
 // fetch all users
-export const fetchAllUsers = async (req: Request, res: Response<UserAttributes[]>, next: NextFunction) => {
+export const fetchAllUsers = async (req: Request, res: Response<UserResponseBody>, next: NextFunction) => {
     console.log('fetchAllUsers');
 
     try {
         const allUsers = await findAllUsers();
 
-        res.status(200).json(allUsers);
+        res.status(200).json({ success: true, data: allUsers});
     } catch (err) {
         next(err)
     }
@@ -62,9 +62,9 @@ export const updateUser = async (req: Request, res: Response<UserResponseBody>, 
 
     try {
         const { userId } = req.params;
-        const { updateBody } = req.body;
+        const updateBody = req.body;
 
-        const updatedUser = await updateUserById(parseInt(userId), updateBody);
+        const updatedUser = await updateUserById(parseInt(userId), updateBody);        
 
         res.status(200).json({ success: true, data: updatedUser });
     } catch (err) {
@@ -74,7 +74,7 @@ export const updateUser = async (req: Request, res: Response<UserResponseBody>, 
 
 // delete user
 export const deleteUser = async (req: Request, res: Response<UserResponseBody>, next: NextFunction) => {
-    console.log('updateUser');
+    console.log('deleteUser');
 
     try {
         const { userId } = req.body;

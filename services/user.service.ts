@@ -3,12 +3,12 @@ import { User } from '../models/user.model';
 import { UserAttributes } from '../types/user.type';
 import { hashPassword, comparePasswords } from '../utils/bcrypt';
 
-export const registerUser = async (name: string, email: string, password: string): Promise<UserAttributes> => {
+export const registerUser = async (name: string, email: string, password: string, roleId:string): Promise<UserAttributes> => {
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) throw Object.assign(new Error('Email already exists'), { status: 400 });
 
   const hashedPassword = await hashPassword(password);
-  const user = await User.create({ name, email, password: hashedPassword });
+  const user = await User.create({ name, email, password: hashedPassword, roleId });
 
   const result = user.toJSON() as UserAttributes;
   delete result.password;
