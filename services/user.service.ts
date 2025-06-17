@@ -1,9 +1,9 @@
 import { Role } from '../models/role.model';
 import { User } from '../models/user.model';
-import { UserAttributes } from '../types/user.type';
+import { UserAttributes, UserResponseBody } from '../types/user.type';
 import { hashPassword, comparePasswords } from '../utils/bcrypt';
 
-export const registerUser = async (name: string, email: string, password: string, roleId:string): Promise<UserAttributes> => {
+export const registerUser = async (name: string, email: string, password: string, roleId: string): Promise<UserAttributes> => {
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) throw Object.assign(new Error('Email already exists'), { status: 400 });
 
@@ -69,4 +69,14 @@ export const updateUserById = async (userId: number, updateBody: Partial<UserAtt
   if (!updatedUser) throw Object.assign(new Error('Failed to retrieve updated user'), { status: 404 });
 
   return updatedUser as UserAttributes;
+};
+
+export const updatePassword = async (user: User, newPassword: string ): Promise<UserResponseBody> => {
+  try {
+    const hashedPassword = await hashPassword(newPassword);
+    await user.update({ password: hashedPassword });
+    return { success: true };
+  } catch (error) {
+    throw Object.assign(new Error('Failed to update password'), { status: 500 });
+  }
 };
