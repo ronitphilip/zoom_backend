@@ -2,11 +2,13 @@ import { Sequelize } from 'sequelize';
 import { initUserModel, User } from './user.model';
 import { initRoleModel, Role } from './role.model';
 import { initZoomUserModel, ZoomUser } from './zoom.model';
+import { CallLogs, initCallLogModel } from './call-logs.model';
 
 const initModels = (sequelize: Sequelize) => {
     initRoleModel(sequelize);
     initUserModel(sequelize);
-    initZoomUserModel(sequelize)
+    initZoomUserModel(sequelize);
+    initCallLogModel(sequelize);
 
     Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
     User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
@@ -14,6 +16,8 @@ const initModels = (sequelize: Sequelize) => {
     ZoomUser.belongsTo(User, { foreignKey: 'userId', as: 'user' });
     User.hasOne(ZoomUser, { foreignKey: 'userId', as: 'zoomUser' });
 
+    CallLogs.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    User.hasMany(CallLogs, { foreignKey: 'userId', as: 'callLogs' })
 };
 
 export default initModels;

@@ -31,6 +31,7 @@ export const initZoomUserModel = (sequelize: Sequelize) => {
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            unique: true,
             references: {
                 model: User,
                 key: 'id',
@@ -41,7 +42,7 @@ export const initZoomUserModel = (sequelize: Sequelize) => {
         {
             sequelize,
             modelName: 'ZoomUser',
-            tableName: 'ZoomUser',
+            tableName: 'zoomuser',
             timestamps: false,
         })
 }

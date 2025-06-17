@@ -1,15 +1,20 @@
+import { ZoomUser } from "../models/zoom.model";
+
 export interface CallLogEntry {
   id?: string;
-  caller_number?: string;
+  userId?: string;
+  direction?: string;
+  caller_did_number?: string;
   caller_name?: string;
-  callee_number?: string;
+  callee_did_number?: string;
   callee_name?: string;
   duration?: number;
-  result?: string;
-  date_time?: string;
+  call_result?: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 export interface CallLogResponse {
   success: boolean;
-  data: CallLogEntry[];
+  data: CallLogEntry[] | ZoomUser;
 }

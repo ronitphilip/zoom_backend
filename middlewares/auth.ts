@@ -5,8 +5,7 @@ const JWT_KEY = process.env.JWT_SECRET || 'SECRET_KEY';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    id?: number;
-    userId: number;
+    id: number;
     role: string;
   };
 }
@@ -18,7 +17,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
   }
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_KEY) as { userId: number; role: string };
+    const payload = jwt.verify(token, JWT_KEY) as { id: number; role: string };
     req.user = payload;
     next();
   } catch {
@@ -36,7 +35,7 @@ export const verifyAdmin = (req: AuthenticatedRequest, res: Response, next: Next
   }
   const token = authHeader.split(' ')[1];
   try {
-    const verified = jwt.verify(token, JWT_KEY) as { userId: number; role: string };
+    const verified = jwt.verify(token, JWT_KEY) as { id: number; role: string };
     if (verified.role !== "admin") {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }

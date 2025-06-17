@@ -1,25 +1,26 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { ZoomUser } from '../models/zoom.model';
 
 let accessToken: string | null = null;
 let tokenExpiresAt: number | null = null;
 
-export const getAccessToken = async () => {
+export const getAccessToken = async (id: number) => {
     console.log('getAccessToken');
 
     const now = Date.now();
-
     if (accessToken && tokenExpiresAt && now < tokenExpiresAt) {
         return accessToken;
     }
 
-    const authString = Buffer.from(`${process.env.ZOOM_CLIENT_ID}:${process.env.ZOOM_CLIENT_SECRET}`).toString('base64');
+    const user = await ZoomUser.findOne({ where: { userId: id}});
+
+    if(!user) throw Object.assign(new Error('User not found!'), { status: 404 });
+
+    const authString = Buffer.from(`${user.client_id}:${user.client_password}`).toString('base64');
 
     try {
         const response = await axios.post(
-            `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${process.env.ZOOM_ACCOUNT_ID}`,
+            `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${user.account_id}`,
             {},
             {
                 headers: {
@@ -33,8 +34,7 @@ export const getAccessToken = async () => {
         tokenExpiresAt = now + response.data.expires_in * 1000 - 60000;
 
         return accessToken;
-    } catch (error: any) {
-        console.error('Zoom token error:', error?.response?.data || error.message);
-        throw new Error('Failed to get Zoom access token');
+    } catch (err) {
+        throw err;
     }
 };

@@ -30,5 +30,10 @@ export interface UserResponseBody {
   token?: string;
   data?: UserAttributes | EncryptionResult | UserAttributes[];
   success: boolean;
-  user? : UserAttributes;
+  user?: UserAttributes;
+}
+
+export interface AuthenticatedPayload {
+  id: number;
+  role: string;
 }

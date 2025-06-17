@@ -1,84 +1,85 @@
-import { NextFunction, Request, Response } from "express";
-import { getAccessToken } from "../zoom/accessToken";
-import axios from "axios";
-import { CallLogEntry, CallLogResponse } from "../types/zoom.type";
+import { NextFunction, Response } from "express";
+import { CallLogResponse } from "../types/zoom.type";
+import { AuthenticatedRequest } from "../middlewares/auth";
+import { getCallDetails, refreshCallLogs, saveUserCredentials } from "../services/zoom.service";
 
-export const OutbondCalls = async (req: Request, res: Response<CallLogResponse>, next: NextFunction) => {
+export const SaveZoomCredentials = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log('SaveZoomCredentials');
+
+  try {
+    const user = req.user;
+    const { account_id, client_id, client_password } = req.body;
+
+    if (!user?.id || !account_id || !client_id || !client_password) {
+      return next(Object.assign(new Error('Credentials missing'), { status: 400 }));
+    }
+
+    const result = await saveUserCredentials(user.id, account_id, client_id, client_password);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export const OutbondCalls = async (req: AuthenticatedRequest, res: Response<CallLogResponse>, next: NextFunction) => {
   console.log('OutBondCalls');
 
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return next(Object.assign(new Error('Token missing'), { status: 401 }));
+    const user = req.user;
+    const { from, to } = req.body;
+
+    if (!user) {
+      return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
     }
 
-    const response = await axios.get<{ call_logs: CallLogEntry[] }>(
-      `${process.env.ZOOM_URL}/phone/call_logs`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          direction: 'outbound',
-          page_size: 20,
-        },
-      }
-    );
+    const result = await getCallDetails(user, 'outbound', from, to)
 
-    const callDetails = (response.data.call_logs || []).map((log: CallLogEntry) => ({
-      id: log.id ?? 'N/A',
-      caller_number: log.caller_number ?? 'Unknown',
-      caller_name: log.caller_name ?? 'Unknown',
-      callee_number: log.callee_number ?? 'Unknown',
-      callee_name: log.callee_name ?? 'Unknown',
-      duration: log.duration ?? 0,
-      result: log.result ?? 'Unknown',
-      date_time: log.date_time ? new Date(log.date_time).toLocaleString() : 'N/A',
-    }));
+    res.status(200).json({ success: true, data: result });
 
-    res.status(200).json({ success: true, data: callDetails });
-
-  } catch (err: any) {
+  } catch (err) {
     next(err);
   }
 };
 
-export const InbondCalls = async (req: Request, res: Response<CallLogResponse>, next: NextFunction) => {
+export const InbondCalls = async (req: AuthenticatedRequest, res: Response<CallLogResponse>, next: NextFunction) => {
   console.log('InbondCalls');
 
   try {
-    const token = await getAccessToken();
-    if (!token) {
-      return next(Object.assign(new Error('Token missing'), { status: 401 }));
+    const user = req.user;
+    const { from, to } = req.body;
+
+    if (!user) {
+      return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
     }
 
-    const response = await axios.get<{ call_logs: CallLogEntry[] }>(
-      `${process.env.ZOOM_URL}/phone/call_logs`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          direction: 'inbound',
-          page_size: 20,
-        },
-      }
-    );
+    const result = await getCallDetails(user, 'inbound', from, to)
 
-    const callDetails = (response.data.call_logs || []).map((log: CallLogEntry) => ({
-      id: log.id ?? 'N/A',
-      caller_number: log.caller_number ?? 'Unknown',
-      caller_name: log.caller_name ?? 'Unknown',
-      callee_number: log.callee_number ?? 'Unknown',
-      callee_name: log.callee_name ?? 'Unknown',
-      duration: log.duration ?? 0,
-      result: log.result ?? 'Unknown',
-      date_time: log.date_time ? new Date(log.date_time).toLocaleString() : 'N/A',
-    }));
+    res.status(200).json({ success: true, data: result });
 
-    res.status(200).json({ success: true, data: callDetails });
+  } catch (err) {
+    next(err);
+  }
+};
 
-  } catch (err: any) {
+export const RefreshCallLogs = async (req: AuthenticatedRequest, res: Response<CallLogResponse>, next: NextFunction) => {
+  console.log('RefreshCallLogs');
+
+  try {
+    const user = req.user;
+    const { from, to, direction } = req.body;
+
+    if (!user) {
+      return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+    }
+
+    if (!['inbound', 'outbound'].includes(direction)) {
+      return next(Object.assign(new Error('Invalid direction'), { status: 400 }));
+    }
+
+    const result = await refreshCallLogs(user, direction, from, to);
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
     next(err);
   }
 };
