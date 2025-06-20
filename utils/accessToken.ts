@@ -12,9 +12,13 @@ export const getAccessToken = async (id: number) => {
         return accessToken;
     }
 
-    const user = await ZoomUser.findOne({ where: { userId: id}});
+    let user = await ZoomUser.findOne({ where: { userId: id, primary: true } });
 
-    if(!user) throw Object.assign(new Error('User not found!'), { status: 404 });
+    if (!user) {
+        user = await ZoomUser.findOne({ where: { userId: id } });
+    }
+
+    if (!user) throw Object.assign(new Error('User not found!'), { status: 404 });
 
     const authString = Buffer.from(`${user.client_id}:${user.client_password}`).toString('base64');
 

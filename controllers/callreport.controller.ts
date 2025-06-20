@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express";
 import { CallLogResponse } from "../types/zoom.type";
 import { AuthenticatedRequest } from "../middlewares/auth";
-import { getCallDetails, refreshCallLogs, saveUserCredentials } from "../services/zoom.service";
+import { getCallDetails, getRawCallLogs, getUserAccounts, refreshCallLogs, saveUserCredentials, setPrimaryAccount } from "../services/zoom.service";
 
 export const SaveZoomCredentials = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   console.log('SaveZoomCredentials');
@@ -21,6 +21,41 @@ export const SaveZoomCredentials = async (req: AuthenticatedRequest, res: Respon
   }
 }
 
+export const GetUserAccounts = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log('GetUserAccounts');
+
+  try {
+    const user = req.user;
+    const body= req.body;
+    if (!user?.id) {
+      return next(Object.assign(new Error('User not authenticated'), { status: 401 }));
+    }
+
+    const accounts = await getUserAccounts(user.id);
+    res.status(200).json({ success: true, data: accounts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const SetPrimaryAccount = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log('SetPrimaryAccount');
+
+  try {
+    const user = req.user;
+    const { accountId } = req.body;
+
+    if (!user?.id || !accountId) {
+      return next(Object.assign(new Error('User ID or Account ID missing'), { status: 400 }));
+    }
+
+    const result = await setPrimaryAccount(user.id, accountId);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const OutbondCalls = async (req: AuthenticatedRequest, res: Response<CallLogResponse>, next: NextFunction) => {
   console.log('OutBondCalls');
 
@@ -30,6 +65,10 @@ export const OutbondCalls = async (req: AuthenticatedRequest, res: Response<Call
 
     if (!user) {
       return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+    }
+
+    if (!from || !to) {
+      return next(Object.assign(new Error('Date missing'), { status: 409 }));
     }
 
     const result = await getCallDetails(user, 'outbound', from, to)
@@ -50,6 +89,10 @@ export const InbondCalls = async (req: AuthenticatedRequest, res: Response<CallL
 
     if (!user) {
       return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+    }
+
+    if (!from || !to) {
+      return next(Object.assign(new Error('Date missing'), { status: 409 }));
     }
 
     const result = await getCallDetails(user, 'inbound', from, to)
@@ -83,3 +126,30 @@ export const RefreshCallLogs = async (req: AuthenticatedRequest, res: Response<C
     next(err);
   }
 };
+
+export const RawCallLogs = async (req: AuthenticatedRequest, res: Response<CallLogResponse>, next: NextFunction) => {
+  console.log('RawCallLogs');
+
+  try {
+    const user = req.user
+    const { from, to } = req.body;
+
+    if (!user) {
+      return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+    }
+
+    if (!from || !to) {
+      return next(Object.assign(new Error('Date missing'), { status: 409 }));
+    }
+
+    const callLogs = await getRawCallLogs(user, from, to);
+
+    res.status(200).json({ success: true, data: callLogs })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const ZoomCredentials = () => {
+  
+}

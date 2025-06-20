@@ -7,7 +7,7 @@ const commonAPI = async <T>(httpMethod: HttpMethod, endpoint: string, reqBody: o
     try {
         const reqConfig: AxiosRequestConfig = {
             method: httpMethod,
-            url : `${base_url}${endpoint}`,
+            url: `${base_url}${endpoint}`,
             data: reqBody,
             headers: {
                 'Content-Type': 'application/json',
@@ -18,15 +18,7 @@ const commonAPI = async <T>(httpMethod: HttpMethod, endpoint: string, reqBody: o
         const result = await axios(reqConfig);
         return result.data;
     } catch (err: any) {
-        if (axios.isAxiosError(err)) {
-            throw {
-                status: err.response?.status,
-                data: err.response?.data,
-                message: err.message,
-            };
-        } else {
-            throw err;
-        }
+        Object.assign(new Error(err.message), { status: err.status || err.response.status })
     }
 }
 

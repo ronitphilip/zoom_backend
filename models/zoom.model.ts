@@ -6,6 +6,7 @@ export class ZoomUser extends Model {
     declare account_id: string;
     declare client_id: string;
     declare client_password: string;
+    declare primary: boolean;
     declare userId: ForeignKey<number>;
 }
 
@@ -36,6 +37,10 @@ export const initZoomUserModel = (sequelize: Sequelize) => {
                 model: User,
                 key: 'id',
             },
+        },
+        primary: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
         }
 
     },
