@@ -9,14 +9,12 @@ import { getAccessToken } from "../utils/accessToken";
 
 export const saveUserCredentials = async (id: number, account_id: string, client_id: string, client_password: string): Promise<CallLogResponse> => {
     try {
+
         const existingUser = await User.findByPk(id);
-        if (!existingUser) throw Object.assign(new Error('User not found!'), { status: 404 });
-
-        const isMatch = await ZoomUser.findOne({ where: { userId: id } });
-        if (isMatch) {
-            throw Object.assign(new Error('Credentials already exist'), { status: 401 });
+        if (!existingUser) {
+            throw Object.assign(new Error('User not found!'), { status: 404 });
         }
-
+        
         const user = await ZoomUser.create({ account_id, client_id, client_password, userId: id });
 
         return { success: true, data: user };

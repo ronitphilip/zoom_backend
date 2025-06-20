@@ -32,7 +32,6 @@ export const initZoomUserModel = (sequelize: Sequelize) => {
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            unique: true,
             references: {
                 model: User,
                 key: 'id',
@@ -41,6 +40,7 @@ export const initZoomUserModel = (sequelize: Sequelize) => {
         primary: {
             type: DataTypes.BOOLEAN,
             allowNull: true,
+            defaultValue: false,
         }
 
     },

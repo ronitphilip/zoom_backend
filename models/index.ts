@@ -14,7 +14,7 @@ const initModels = (sequelize: Sequelize) => {
     User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
     
     ZoomUser.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-    User.hasOne(ZoomUser, { foreignKey: 'userId', as: 'zoomUser' });
+    User.hasMany(ZoomUser, { foreignKey: 'userId', as: 'zoomUser' });
 
     CallLogs.belongsTo(User, { foreignKey: 'userId', as: 'user' });
     User.hasMany(CallLogs, { foreignKey: 'userId', as: 'callLogs' })
