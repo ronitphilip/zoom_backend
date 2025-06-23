@@ -38,3 +38,48 @@ export interface CallLogResponse {
   success: boolean;
   data: CallLogEntry[] | ZoomUser;
 }
+
+export interface ReportResponse {
+  success: boolean;
+  data: AgentReport[] | QueueReport[]
+}
+
+export interface ApiResponse {
+  users: any[];
+}
+
+export interface AgentReport {
+  id?: number;
+  date?: string;
+  time?: string;
+  status?: string;
+  sub_status?: string;
+  duration?: number;
+  queue?: string;
+  handle_duration?: number;
+  hold_duration?: number;
+  wrap_up_duration?: number;
+  channel?: string;
+  direction?: string;
+  calling_party?: string;
+  transfer_initiated_count?: number;
+  transfer_completed_count?: number;
+  user_name?: string;
+}
+
+export interface QueueReport {
+  user_id: string;
+  user_name: string;
+  queue_name: string;
+  date: string;
+  total_handle_duration: number;
+  total_hold_duration: number;
+  total_wrap_up_duration: number;
+  total_transfer_initiated_count: number;
+  total_transfer_completed_count: number;
+  total_handled_count: number;
+  total_outbound_handled_count: number;
+  total_inbound_handled_count: number;
+  total_ready_duration: number;
+  total_occupied_duration: number;
+}
