@@ -1,14 +1,14 @@
 import { NextFunction, Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { ReportResponse } from "../types/zoom.type";
-import { fetchAgentReports, fetchQueueReports } from "../services/report.service";
+import { fetchAgentPerfomance, fetchTimeCard, listAllUsers } from "../services/report.service";
 
-export const AgentReportController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
-    console.log('AgentReport');
+export const AgentPerfomanceController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
+    console.log('AgentPerfomanceController');
 
     try {
         const user = req.user;
-        const { from, to } = req.body;
+        const { from, to, channel, agent, format, count, page, nextPageToken } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -18,21 +18,28 @@ export const AgentReportController = async (req: AuthenticatedRequest, res: Resp
             return next(Object.assign(new Error('Date missing'), { status: 409 }));
         }
 
-        const result = await fetchAgentReports(user, from, to)
+        const result = await fetchAgentPerfomance(user, from, to, channel, agent, format, count, page || 1, nextPageToken);
+        const agents = await listAllUsers(user);
 
-        res.status(200).json({ success: true, data: result });
+        const response = {
+            performance: result.data,
+            users: agents,
+            nextPageToken: result.nextPageToken,
+            totalRecords: result.totalRecords,
+        };
 
+        res.status(200).json({ success: true, data: response });
     } catch (err) {
         next(err);
     }
 };
 
-export const QueueReportController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
-    console.log('QueueReportController');
-    
+export const TimeCardController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
+    console.log('TimeCardController');
+
     try {
         const user = req.user;
-        const { from, to } = req.body;
+        const { from, to, status, agent, format, count, page, nextPageToken } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -42,9 +49,17 @@ export const QueueReportController = async (req: AuthenticatedRequest, res: Resp
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await fetchQueueReports(user, from, to);
+        const result = await fetchTimeCard(user, from, to, status, agent, format, count, page, nextPageToken);
+        const agents = await listAllUsers(user);
 
-        res.status(200).json({success: true, data: result});
+        const response = {
+            traceData: result.data,
+            users: agents,
+            nextPageToken: result.nextPageToken,
+            totalRecords: result.totalRecords,
+        };
+
+        res.status(200).json({ success: true, data: result });
     } catch (err) {
         next(err);
     }

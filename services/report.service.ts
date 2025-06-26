@@ -2,234 +2,285 @@ import { Op } from "sequelize";
 import { AgentPerformance } from "../models/agent-performance.model";
 import { AgentTimecard } from "../models/agent-timecard.model";
 import { AuthenticatedPayload } from "../types/user.type";
-import { AgentReport, ApiResponse, QueueReport } from "../types/zoom.type";
+import { PerformanceAttributes, TimecardAttributes } from "../types/zoom.type";
 import { getAccessToken } from "../utils/accessToken";
 import commonAPI from "../config/commonAPI";
 
-const transformToAgentReport = (performanceRecords: any[], timecardRecords: any[]): AgentReport[] => {
-    const reportMap = new Map<string, AgentReport>();
-
-    performanceRecords.forEach(record => {
-        const date = record.start_time.split('T')[0];
-        const key = `${record.user_id}_${date}`;
-        const existingReport = reportMap.get(key) || {};
-
-        reportMap.set(key, {
-            ...existingReport,
-            id: record.id || existingReport.id,
-            date: date,
-            time: record.start_time.split('T')[1]?.split('.')[0] || record.start_time.split('T')[1],
-            queue: record.queue_name || '',
-            handle_duration: record.handle_duration || 0,
-            hold_duration: record.hold_duration || 0,
-            wrap_up_duration: record.wrap_up_duration || 0,
-            channel: record.channel || '',
-            direction: record.direction || '',
-            calling_party: record.user_id,
-            transfer_initiated_count: record.transfer_initiated_count || 0,
-            transfer_completed_count: record.transfer_completed_count || 0,
-            user_name: record.user_name || existingReport.user_name || '',
-        });
-    });
-
-    timecardRecords.forEach(record => {
-        const date = record.start_time.split('T')[0];
-        const key = `${record.user_id}_${date}`;
-        const existingReport = reportMap.get(key) || {};
-
-        reportMap.set(key, {
-            ...existingReport,
-            id: record.id || existingReport.id,
-            date: date,
-            time: record.start_time.split('T')[1]?.split('.')[0] || record.start_time.split('T')[1],
-            status: record.user_status || '',
-            sub_status: record.user_sub_status || '',
-            duration: record.ready_duration || record.occupied_duration || 0,
-            queue: existingReport.queue || '',
-            handle_duration: existingReport.handle_duration || 0,
-            hold_duration: existingReport.hold_duration || 0,
-            wrap_up_duration: existingReport.wrap_up_duration || 0,
-            channel: existingReport.channel || '',
-            direction: existingReport.direction || '',
-            calling_party: record.user_id,
-            transfer_initiated_count: existingReport.transfer_initiated_count || 0,
-            transfer_completed_count: existingReport.transfer_completed_count || 0,
-            user_name: record.user_name || existingReport.user_name || '',
-        });
-    });
-
-    return Array.from(reportMap.values());
-};
-
-const transformToQueueReport = (performanceRecords: any[], timecardRecords: any[]): QueueReport[] => {
-    const reportMap = new Map<string, QueueReport>();
-
-    performanceRecords.forEach(record => {
-        const date = record.start_time.split('T')[0];
-        const key = `${record.user_id}_${record.queue_name || 'Unknown'}_${date}`;
-        const existingReport = reportMap.get(key) || {
-            user_id: record.user_id,
-            user_name: record.user_name || '',
-            queue_name: record.queue_name || 'Unknown',
-            date: date,
-            total_handle_duration: 0,
-            total_hold_duration: 0,
-            total_wrap_up_duration: 0,
-            total_transfer_initiated_count: 0,
-            total_transfer_completed_count: 0,
-            total_handled_count: 0,
-            total_outbound_handled_count: 0,
-            total_inbound_handled_count: 0,
-            total_ready_duration: 0,
-            total_occupied_duration: 0,
-        };
-
-        reportMap.set(key, {
-            ...existingReport,
-            total_handle_duration: existingReport.total_handle_duration + (record.handle_duration || 0),
-            total_hold_duration: existingReport.total_hold_duration + (record.hold_duration || 0),
-            total_wrap_up_duration: existingReport.total_wrap_up_duration + (record.wrap_up_duration || 0),
-            total_transfer_initiated_count: existingReport.total_transfer_initiated_count + (record.transfer_initiated_count || 0),
-            total_transfer_completed_count: existingReport.total_transfer_completed_count + (record.transfer_completed_count || 0),
-            total_handled_count: existingReport.total_handled_count + (record.handled_count || 0),
-            total_outbound_handled_count: existingReport.total_outbound_handled_count + (record.outbound_handled_count || 0),
-            total_inbound_handled_count: existingReport.total_inbound_handled_count + (record.inbound_handled_count || 0),
-        });
-    });
-
-    timecardRecords.forEach(record => {
-        const date = record.start_time.split('T')[0];
-        const key = `${record.user_id}_${record.queue_name || 'Unknown'}_${date}`;
-        const existingReport = reportMap.get(key) || {
-            user_id: record.user_id,
-            user_name: record.user_name || '',
-            queue_name: record.queue_name || 'Unknown',
-            date: date,
-            total_handle_duration: 0,
-            total_hold_duration: 0,
-            total_wrap_up_duration: 0,
-            total_transfer_initiated_count: 0,
-            total_transfer_completed_count: 0,
-            total_handled_count: 0,
-            total_outbound_handled_count: 0,
-            total_inbound_handled_count: 0,
-            total_ready_duration: 0,
-            total_occupied_duration: 0,
-        };
-
-        reportMap.set(key, {
-            ...existingReport,
-            total_ready_duration: existingReport.total_ready_duration + (record.ready_duration || 0),
-            total_occupied_duration: existingReport.total_occupied_duration + (record.occupied_duration || 0),
-        });
-    });
-
-    const reports = Array.from(reportMap.values());
-    // Sort by date
-    reports.sort((a, b) => a.date.localeCompare(b.date));
-
-    return reports;
-};
-
-export const fetchAgentReports = async (user: AuthenticatedPayload, from: string, to: string): Promise<AgentReport[]> => {
+export const listAllUsers = async (user: AuthenticatedPayload) => {
     try {
-        const [performanceRecords, timecardRecords] = await Promise.all([
-            AgentPerformance.findAll({
-                where: {
-                    start_time: { [Op.between]: [from, to] },
-                },
-            }),
-            AgentTimecard.findAll({
-                where: {
-                    start_time: { [Op.between]: [from, to] },
-                },
-            }),
-        ]);
+        const token = await getAccessToken(user.id);
+        if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
 
-        if (performanceRecords.length > 0 && timecardRecords.length > 0) {
-            return transformToAgentReport(performanceRecords, timecardRecords);
+        const result = await commonAPI("GET", '/contact_center/users', {}, {}, token);
+
+        return result.users?.map((user: any) => user.display_name);
+    } catch (err) {
+        throw err
+    }
+}
+
+export const fetchAgentPerfomance = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    channel: string,
+    agent: string,
+    format: string,
+    count: number,
+    page: number = 1,
+    nextPageToken?: string): Promise<{ data: PerformanceAttributes[], nextPageToken?: string, totalRecords: number }> => {
+
+    try {
+        const offset = (page - 1) * count;
+
+        const whereClause: any = {
+            start_time: {
+                [Op.between]: [from, to],
+            },
+        };
+
+        if (channel) {
+            whereClause.channel = channel;
+        }
+
+        if (agent) {
+            whereClause.user_name = agent;
+        }
+
+        const existingData = await AgentPerformance.findAll({
+            where: whereClause,
+            attributes: [
+                'engagement_id',
+                'start_time',
+                'queue_name',
+                'channel',
+                'direction',
+                'user_name',
+                'conversation_duration',
+                'transfer_initiated_count',
+                'transfer_completed_count',
+                'hold_count',
+                'agent_offered_count',
+            ],
+            order: [['start_time', format]],
+            limit: count,
+            offset,
+        });
+
+        const totalDbRecords = await AgentPerformance.count({ where: whereClause });
+
+        if (existingData.length > 0 && existingData.length >= count) {
+            return {
+                data: existingData.map(record => ({
+                    engagement_id: record.engagement_id,
+                    start_time: record.start_time,
+                    queue_name: record.queue_name,
+                    channel: record.channel,
+                    direction: record.direction,
+                    user_name: record.user_name,
+                    conversation_duration: record.conversation_duration,
+                    transfer_initiated_count: record.transfer_initiated_count,
+                    transfer_completed_count: record.transfer_completed_count,
+                    hold_count: record.hold_count,
+                    agent_offered_count: record.agent_offered_count,
+                })) as PerformanceAttributes[],
+                nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
+                totalRecords: totalDbRecords,
+            };
         }
 
         const token = await getAccessToken(user.id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
 
-        const [performanceResponse, timecardResponse] = await Promise.all([
-            commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_performance?from=${from}&to=${to}`, {}, {}, token),
-            commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_timecard?from=${from}&to=${to}`, {}, {}, token),
-        ]);
+        const queryParams = new URLSearchParams({
+            from,
+            to,
+            page_size: count.toString(),
+        });
 
-        const performanceUsers = (performanceResponse as ApiResponse).users || [];
-        const timecardUsers = (timecardResponse as ApiResponse).users || [];
+        if (nextPageToken && !nextPageToken.startsWith('db_page_')) {
+            queryParams.append('next_page_token', nextPageToken);
+        }
 
-        await Promise.all([
-            AgentPerformance.bulkCreate(performanceUsers.map(record => ({
-                ...record,
-                queue_name: record.queue_name || '',
-                handle_duration: record.handle_duration || 0,
-                hold_duration: record.hold_duration || 0,
-                wrap_up_duration: record.wrap_up_duration || 0,
-                transfer_initiated_count: record.transfer_initiated_count || 0,
-                transfer_completed_count: record.transfer_completed_count || 0,
-            }))),
-            AgentTimecard.bulkCreate(timecardUsers.map(record => ({
-                ...record,
-                duration: record.ready_duration || record.occupied_duration || 0,
-            }))),
-        ]);
+        const response = await commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_performance?${queryParams.toString()}`, {}, {}, token);
 
-        return transformToAgentReport(performanceUsers, timecardUsers);
+        try {
+            await AgentPerformance.bulkCreate(response.users, {
+                ignoreDuplicates: true,
+            });
+        } catch (bulkError) {
+            console.error('Failed to store data in AgentPerformance table:', bulkError);
+        }
+
+        let apiData = response.users || [];
+        const apiNextPageToken = response.next_page_token;
+        const apiTotalRecords = response.total_records || apiData.length;
+
+        if (apiData.length === 0) {
+            return { data: [], totalRecords: totalDbRecords };
+        }
+
+        if (channel) {
+            apiData = apiData.filter((item: any) => item.channel === channel);
+        }
+
+        if (agent) {
+            apiData = apiData.filter((item: any) => item.user_name === agent);
+        }
+
+        apiData.sort((a: any, b: any) => {
+            const dateA = new Date(a.start_time);
+            const dateB = new Date(b.start_time);
+            return format.toUpperCase() === 'ASC' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+        });
+
+        const filteredApiData = apiData.map((item: any) => ({
+            engagement_id: item.engagement_id,
+            start_time: item.start_time,
+            queue_name: item.queue_name,
+            channel: item.channel,
+            direction: item.direction,
+            user_name: item.user_name,
+            conversation_duration: item.conversation_duration,
+            transfer_initiated_count: item.transfer_initiated_count,
+            transfer_completed_count: item.transfer_completed_count,
+            hold_count: item.hold_count,
+            agent_offered_count: item.agent_offered_count,
+        }));
+
+        return {
+            data: filteredApiData as PerformanceAttributes[],
+            nextPageToken: apiNextPageToken,
+            totalRecords: apiTotalRecords,
+        };
     } catch (err) {
         throw err;
     }
 };
 
-export const fetchQueueReports = async (user: AuthenticatedPayload, from: string, to: string): Promise<QueueReport[]> => {
+export const fetchTimeCard = async (user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    status: string,
+    agent: string,
+    format: string,
+    count: number,
+    page: number = 1,
+    nextPageToken?: string): Promise<{ data: TimecardAttributes[], nextPageToken?: string, totalRecords: number }> => {
     try {
-        const [performanceRecords, timecardRecords] = await Promise.all([
-            AgentPerformance.findAll({
-                where: {
-                    start_time: { [Op.between]: [from, to] },
-                },
-            }),
-            AgentTimecard.findAll({
-                where: {
-                    start_time: { [Op.between]: [from, to] },
-                },
-            }),
-        ]);
 
-        if (performanceRecords.length > 0 || timecardRecords.length > 0) {
-            return transformToQueueReport(performanceRecords, timecardRecords);
+        const offset = (page - 1) * count;
+
+        const whereClause: any = {
+            start_time: {
+                [Op.between]: [from, to],
+            },
+        };
+
+        if (status) {
+            whereClause.user_status = status;
+        }
+
+        if (agent) {
+            whereClause.user_name = agent;
+        }
+
+        const existingData = await AgentTimecard.findAll({
+            where: whereClause,
+            attributes: [
+                'work_session_id',
+                'start_time',
+                'user_name',
+                'user_status',
+                'user_sub_status',
+                'team_name',
+                'occupied_duration'
+            ],
+            order: [['start_time', format]],
+            limit: count,
+            offset,
+        });
+
+        const totalDbRecords = await AgentTimecard.count({ where: whereClause });
+
+        if (existingData.length > 0 && existingData.length >= count) {
+            return {
+                data: existingData.map(record => ({
+                    work_session_id: record.work_session_id,
+                    start_time: record.start_time,
+                    user_name: record.user_name,
+                    user_status: record.user_status,
+                    user_sub_status: record.user_sub_status,
+                    team_name: record.team_name,
+                    occupied_duration: record.occupied_duration
+                })) as TimecardAttributes[],
+                nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
+                totalRecords: totalDbRecords,
+            }
         }
 
         const token = await getAccessToken(user.id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
 
-        const [performanceResponse, timecardResponse] = await Promise.all([
-            commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_performance?from=${from}&to=${to}`, {}, {}, token),
-            commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_timecard?from=${from}&to=${to}`, {}, {}, token),
-        ]);
+        const queryParams = new URLSearchParams({
+            from,
+            to,
+            page_size: count.toString(),
+        });
 
-        const performanceUsers = (performanceResponse as ApiResponse).users || [];
-        const timecardUsers = (timecardResponse as ApiResponse).users || [];
+        if (nextPageToken && !nextPageToken.startsWith('db_page_')) {
+            queryParams.append('next_page_token', nextPageToken);
+        }
 
-        await Promise.all([
-            AgentPerformance.bulkCreate(performanceUsers.map(record => ({
-                ...record,
-                queue_name: record.queue_name || '',
-                handle_duration: record.handle_duration || 0,
-                hold_duration: record.hold_duration || 0,
-                wrap_up_duration: record.wrap_up_duration || 0,
-                transfer_initiated_count: record.transfer_initiated_count || 0,
-                transfer_completed_count: record.transfer_completed_count || 0,
-            }))),
-            AgentTimecard.bulkCreate(timecardUsers.map(record => ({
-                ...record,
-                duration: record.ready_duration || record.occupied_duration || 0,
-            }))),
-        ]);
+        const response = await commonAPI("GET", `/contact_center/analytics/dataset/historical/agent_timecard?from=${from}&to=${to}`, {}, {}, token);
 
-        return transformToQueueReport(performanceUsers, timecardUsers);
+        try {
+            await AgentTimecard.bulkCreate(response.users, {
+                ignoreDuplicates: true,
+            });
+        } catch (err) {
+            console.log('Failed to store data in AgentPerformance table');
+            throw err;
+        }
+
+        let apiData = response.users || [];
+        const apiNextPageToken = response.next_page_token;
+        const apiTotalRecords = response.total_records || apiData.length;
+
+        if (apiData.length === 0) {
+            return { data: [], totalRecords: totalDbRecords };
+        }
+
+        if (status) {
+            apiData = apiData.filter((item: any) => item.user_status === status);
+        }
+
+        if (agent) {
+            apiData = apiData.filter((item: any) => item.user_name === agent);
+        }
+
+        apiData.sort((a: any, b: any) => {
+            const dateA = new Date(a.start_time);
+            const dateB = new Date(b.start_time);
+            return format.toUpperCase() === 'ASC' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+        });
+
+        const transformedData = apiData.map((item: any) => ({
+            work_session_id: item.work_session_id || "",
+            start_time: item.start_time || "",
+            user_name: item.user_name || "",
+            user_status: item.user_status || "",
+            user_sub_status: item.user_sub_status || "",
+            team_name: item.team?.team_name || "",
+            occupied_duration: item.occupied_duration || null,
+        }));
+
+        return {
+            data: transformedData as TimecardAttributes[],
+            nextPageToken: apiNextPageToken,
+            totalRecords: apiTotalRecords,
+        };
+
     } catch (err) {
         throw err;
     }

@@ -9,7 +9,11 @@ export class AgentTimecard extends Model {
     declare user_name: string;
     declare user_status: string;
     declare user_sub_status: string;
-    declare duration: number;
+    declare team_id: string;
+    declare team_name: string;
+    declare not_ready_duration?: number;
+    declare ready_duration?: number;
+    declare occupied_duration?: number;
 }
 
 export const initAgentTimecardModel = (sequelize: Sequelize) => {
@@ -26,11 +30,15 @@ export const initAgentTimecardModel = (sequelize: Sequelize) => {
         user_name: { type: DataTypes.STRING },
         user_status: { type: DataTypes.STRING },
         user_sub_status: { type: DataTypes.STRING },
-        duration: { type: DataTypes.INTEGER },
+        team_id: { type: DataTypes.STRING },
+        team_name: { type: DataTypes.STRING },
+        not_ready_duration: { type: DataTypes.INTEGER, allowNull: true },
+        ready_duration: { type: DataTypes.INTEGER, allowNull: true },
+        occupied_duration: { type: DataTypes.INTEGER, allowNull: true },
     }, {
         sequelize,
         modelName: 'AgentTimecard',
         tableName: 'agentTimecard',
         timestamps: false,
-    })
-}
+    });
+};
