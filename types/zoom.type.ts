@@ -73,3 +73,16 @@ export interface TimecardAttributes {
   ready_duration?: number;
   occupied_duration?: number;
 }
+
+export interface TeamReportSummary {
+  team_name: string;
+  total_interactions: number;
+  avg_handle_duration: number;
+  total_hold_count: number;
+  avg_wrap_up_duration: number;
+  channels: string[];
+  directions: string[];
+  transfer_initiated: number;
+  transfer_completed: number;
+  queues: string[];
+}

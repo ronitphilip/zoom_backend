@@ -19,7 +19,10 @@ export const UserData = async (user: AuthenticatedPayload) => {
 
         const result = await commonAPI("GET", '/contact_center/users', {}, {}, token);
 
-        return result.users?.map((user: any) => user.display_name);
+        return result.users?.map((user: any) => ({
+            user_id: user.user_id,
+            name: user.display_name
+        }));
     } catch (err) {
         throw err
     }

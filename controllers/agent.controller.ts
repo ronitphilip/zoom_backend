@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { ReportResponse } from "../types/zoom.type";
-import { fetchAgentPerfomance, fetchTimeCard, listAllUsers } from "../services/report.service";
+import { fetchAgentPerfomance, fetchAllTeams, fetchTimeCard, generateGroupSummary, listAllUsers } from "../services/report.service";
 
 export const AgentPerfomanceController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
     console.log('AgentPerfomanceController');
@@ -59,8 +59,37 @@ export const TimeCardController = async (req: AuthenticatedRequest, res: Respons
             totalRecords: result.totalRecords,
         };
 
-        res.status(200).json({ success: true, data: result });
+        res.status(200).json({ success: true, data: response });
     } catch (err) {
         next(err);
     }
 };
+
+export const GroupSummaryController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
+    console.log('GroupSummaryController');
+
+    try {
+        const user = req.user;
+        const { from, to, team_name, channel } = req.body;
+
+        if (!user || !user.id) {
+            return next(Object.assign(new Error("Unauthorized: User or user ID missing"), { status: 401 }));
+        }
+
+        if (!from || !to) {
+            return next(Object.assign(new Error("Date missing"), { status: 400 }));
+        }
+
+        const teams = await fetchAllTeams();
+        const data = await generateGroupSummary(user, from, to, team_name, channel);
+
+        const result = {
+            allteams : teams,
+            summary: data
+        }
+
+        res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+}
