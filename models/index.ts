@@ -7,6 +7,7 @@ import { initAgentPerformanceModel } from './agent-performance.model';
 import { initAgentTimecardModel } from './agent-timecard.model';
 import { initTeamModel } from './team.model';
 import { initAgentEngagementModel } from './agent-engagement.model';
+import { initAgentQueueModel } from './agent-queue.model';
 
 const initModels = (sequelize: Sequelize) => {
     initRoleModel(sequelize);
@@ -17,6 +18,7 @@ const initModels = (sequelize: Sequelize) => {
     initAgentTimecardModel(sequelize);
     initTeamModel(sequelize);
     initAgentEngagementModel(sequelize);
+    initAgentQueueModel(sequelize);
 
     Role.hasMany(User, { foreignKey: 'roleId', as: 'users' });
     User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });

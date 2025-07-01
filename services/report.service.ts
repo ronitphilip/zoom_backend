@@ -320,7 +320,7 @@ export const generateGroupSummary = async (
                 'channel',
                 'direction',
                 'handle_duration',
-                'hold_count',
+                'hold_count',   
                 'wrap_up_duration',
                 'transfer_initiated_count',
                 'transfer_completed_count',
