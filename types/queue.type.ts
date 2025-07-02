@@ -4,9 +4,10 @@ export interface QueueResponse {
 }
 
 export interface AgentQueueReponse {
-    reports: QueueAttributes[];
+    reports: QueueAttributes[] | AgentAbandonedReport[] | DetailedFlowReport[];
     nextPageToken: string | undefined;
     totalRecords: number,
+    agents?: string[],
 }
 
 export interface QueueAttributes {
@@ -68,4 +69,40 @@ export interface AbandonedCall {
     channel: string | null;
     queueWaitType: string | null;
     waitingDuration: number;
+}
+
+export interface AgentAbandonedReport {
+    startTime: string;
+    engagementId: string;
+    direction: string;
+    consumerNumber: string;
+    consumerId: string;
+    consumerDisplayName: string;
+    queueId: string;
+    queueName: string;
+    agentId: string;
+    agentName: string;
+    channel: string;
+    queueWaitType: string;
+    waitingDuration: number;
+    voiceMail: number;
+    transferCount: number;
+}
+
+export interface DetailedFlowReport {
+    date: string;
+    flowId: string;
+    flowName: string;
+    totalOffered: number;
+    totalAnswered: number;
+    abandonedCalls: number;
+    acdTime: number;
+    acwTime: number;
+    agentRingTime: number;
+    avgHandleTime: number;
+    avgAcwTime: number;
+    maxHandleTime: number;
+    transferCount: number;
+    voiceCalls: number;
+    digitalInteractions: number;
 }

@@ -7,6 +7,7 @@ import zoomRouter from './routes/zoom.routes';
 import reportRouter from './routes/report.routes';
 import teamRouter from './routes/team.routes';
 import agentQueueRouter from './routes/agent-queue.routes';
+import agentVDNRouter from './routes/agent-vdn.routes';
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ app.use('/zoom', zoomRouter);
 app.use('/reports', reportRouter);
 app.use('/teams', teamRouter);
 app.use('/queues', agentQueueRouter);
+app.use('/vdn', agentVDNRouter);
 app.use(errorHandler);
 
 app.get('/', (_req, res) => {
