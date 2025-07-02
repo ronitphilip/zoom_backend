@@ -1,6 +1,12 @@
 export interface QueueResponse {
     success: boolean;
-    data: QueueAttributes[] | DetailedQueueReport[] | AbandonedCall[]
+    data: any;
+}
+
+export interface AgentQueueReponse {
+    reports: QueueAttributes[];
+    nextPageToken: string | undefined;
+    totalRecords: number,
 }
 
 export interface QueueAttributes {

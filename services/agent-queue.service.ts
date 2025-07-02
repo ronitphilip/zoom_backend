@@ -1,11 +1,11 @@
 import { Op, fn, col, literal } from 'sequelize';
 import commonAPI from "../config/commonAPI";
-import { AbandonedCall, DetailedQueueReport, QueueAttributes } from "../types/queue.type";
+import { AbandonedCall, AgentQueueReponse, DetailedQueueReport, QueueAttributes } from "../types/queue.type";
 import { AuthenticatedPayload } from "../types/user.type";
 import { getAccessToken } from "../utils/accessToken";
 import { AgentQueue } from "../models/agent-queue.model";
 
-const fetchData = async (id: number, from: string, to: string): Promise<QueueAttributes[]> => {
+const fetchData = async (id: number, from: string, to: string, count: number, page: number = 1, nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
         const token = await getAccessToken(id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
@@ -13,12 +13,16 @@ const fetchData = async (id: number, from: string, to: string): Promise<QueueAtt
         const queryParams = new URLSearchParams({
             from,
             to,
-            page_size: '1000'
+            page_size: count.toString(),
         });
+
+        if (nextPageToken && !nextPageToken.startsWith('db_page_')) {
+            queryParams.append('next_page_token', nextPageToken);
+        }
 
         const result = await commonAPI("GET", `/contact_center/engagements?${queryParams.toString()}`, {}, {}, token);
 
-        const flattenedData = result.engagements.map((item: any) => ({
+        const flattenedData = result.engagements?.map((item: any) => ({
             engagement_id: item.engagement_id,
             direction: item.direction,
             start_time: item.start_time,
@@ -50,14 +54,25 @@ const fetchData = async (id: number, from: string, to: string): Promise<QueueAtt
             updateOnDuplicate: ['engagement_id'],
         });
 
-        return flattenedData;
+        return {
+            reports: flattenedData,
+            nextPageToken: result.next_page_token,
+            totalRecords: result.total_records,
+        };
     } catch (err) {
         throw err
     }
 }
 
-export const fetchAgentQueue = async (user: AuthenticatedPayload, from: string, to: string): Promise<QueueAttributes[]> => {
+export const fetchAgentQueue = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    count: number,
+    page: number = 1,
+    nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
+        const offset = (page - 1) * count;
         const whereClause: any = {
             start_time: { [Op.between]: [from, to] },
         };
@@ -86,20 +101,36 @@ export const fetchAgentQueue = async (user: AuthenticatedPayload, from: string, 
                 'talk_duration',
                 'transferCount',
             ],
+            limit: count,
+            offset,
         });
 
-        if (existingData.length > 0) {
-            return existingData as QueueAttributes[];
+        const totalDbRecords = await AgentQueue.count({ where: whereClause });
+
+        if (existingData.length > 0 && existingData.length >= count) {
+            return {
+                reports: existingData,
+                nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
+                totalRecords: totalDbRecords,
+            };
         }
 
-        return await fetchData(user.id, from, to);
+        return await fetchData(user.id, from, to, count, page, nextPageToken);
 
     } catch (err) {
         throw err;
     }
 }
 
-export const getQueueReport = async (user: AuthenticatedPayload, from: string, to: string, grouping: 'daily' | 'interval', intervalMinutes?: 15 | 30 | 60): Promise<DetailedQueueReport[]> => {
+export const getQueueReport = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    count: number,
+    page: number = 1,
+    grouping: 'daily' | 'interval',
+    intervalMinutes?: 15 | 30 | 60,
+    nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
         let dateFormat: string;
         if (grouping === 'daily') {
@@ -119,9 +150,10 @@ export const getQueueReport = async (user: AuthenticatedPayload, from: string, t
         });
 
         if (existingData.length === 0) {
-            await fetchData(user.id, from, to);
+            await fetchData(user.id, from, to, count, page, nextPageToken);
         }
 
+        const offset = (page - 1) * count;
         const results = await AgentQueue.findAll({
             where: {
                 start_time: { [Op.between]: [from, to] },
@@ -176,7 +208,15 @@ export const getQueueReport = async (user: AuthenticatedPayload, from: string, t
                 'user_id',
                 'display_name',
             ],
+            limit: count,
+            offset,
             raw: true,
+        });
+
+        const totalRecords = await AgentQueue.count({
+            where: {
+                start_time: { [Op.between]: [from, to] },
+            },
         });
 
         const formattedResults: DetailedQueueReport[] = results.map((result: any) => ({
@@ -199,13 +239,23 @@ export const getQueueReport = async (user: AuthenticatedPayload, from: string, t
             digitalInteractions: Number(result.digitalInteractions) || 0,
         }));
 
-        return formattedResults;
+        return {
+            reports: formattedResults,
+            nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
+            totalRecords,
+        };
     } catch (err) {
         throw err;
     }
 };
 
-export const getAbandonedCalls = async (user: AuthenticatedPayload, from: string, to: string): Promise<AbandonedCall[]> => {
+export const getAbandonedCalls = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    count: number,
+    page: number = 1,
+    nextPageToken?: string): Promise<AbandonedCall[]> => {
     try {
         const existingData = await AgentQueue.findAll({
             where: {
@@ -217,7 +267,7 @@ export const getAbandonedCalls = async (user: AuthenticatedPayload, from: string
         });
 
         if (existingData.length === 0) {
-            await fetchData(user.id, from, to);
+            await fetchData(user.id, from, to, count, page, nextPageToken);
         }
 
         const results = await AgentQueue.findAll({
