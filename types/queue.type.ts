@@ -105,4 +105,8 @@ export interface DetailedFlowReport {
     transferCount: number;
     voiceCalls: number;
     digitalInteractions: number;
+    inboundCalls: number;
+    outboundCalls: number;
+    successPercentage: string;
+    abandonPercentage: string;
 }
