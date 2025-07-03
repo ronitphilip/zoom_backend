@@ -1,6 +1,6 @@
 import { NextFunction, Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth";
-import { fetchAgentQueue, getAbandonedCalls, getAgentAbandonedReport, getQueueReport } from "../services/agent-queue.service";
+import { fetchAgentQueue, fetchData, getAbandonedCalls, getAgentAbandonedReport, getQueueReport } from "../services/agent-queue.service";
 import { QueueResponse } from "../types/queue.type";
 
 export const fetchAgentQueueController = async (req: AuthenticatedRequest, res: Response<QueueResponse>, next: NextFunction) => {
@@ -118,3 +118,26 @@ export const AgentAbandonedReportController = async (req: AuthenticatedRequest, 
         next(err);
     }
 };
+
+export const RefreshQueueController = async (req: AuthenticatedRequest, res: Response<QueueResponse>, next: NextFunction) => {
+    console.log('RefreshQueueController');
+    
+    try {
+        const user = req.user;
+        const { from, to, count, page, nextPageToken } = req.body;
+
+        if (!user) {
+            return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+        }
+
+        if (!from || !to) {
+            return next(Object.assign(new Error('Date missing'), { status: 404 }));
+        }
+
+        const result = await fetchData(user, from, to, count, page, nextPageToken);
+
+        res.status(200).json({ success: true, data: result })
+    } catch (err) {
+        next(err)
+    }
+}

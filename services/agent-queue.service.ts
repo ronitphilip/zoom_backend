@@ -5,7 +5,7 @@ import { AuthenticatedPayload } from "../types/user.type";
 import { getAccessToken } from "../utils/accessToken";
 import { AgentQueue } from "../models/agent-queue.model";
 
-const fetchData = async (user: AuthenticatedPayload, from: string, to: string, count: number, page: number = 1, nextPageToken?: string): Promise<AgentQueueReponse> => {
+export const fetchData = async (user: AuthenticatedPayload, from: string, to: string, count: number, page: number = 1, nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
         const token = await getAccessToken(user.id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
