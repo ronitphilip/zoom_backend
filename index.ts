@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
+import cron from 'node-cron';
 dotenv.config();
 
 import app from './app';
 import initializeSequelize from './config/db';
 import initModels from './models';
+import { runAutoUpdates } from './utils/autoUpdate';
 
 const PORT = process.env.PORT || 5000;
 
@@ -13,6 +15,14 @@ const startServer = async () => {
     await initModels(sequelize);
     await sequelize.sync({ alter: true });
     console.log('Database synced');
+
+    cron.schedule('0 0 * * *', async () => {
+      try {
+        await runAutoUpdates();
+      } catch (error) {
+        console.error('Zoom auto-update task failed:', error);
+      }
+    });
 
     app.listen(PORT, () => {
       console.log(`Server running at PORT: ${PORT}`);
