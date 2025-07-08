@@ -7,7 +7,7 @@ const authRouter = Router();
 authRouter.post('/register', register);
 authRouter.post('/login', login);
 authRouter.get('/all-users', authenticate, fetchAllUsers);
-authRouter.patch('/update-user/:userId', verifyAdmin, updateUser);
+authRouter.patch('/update-user/:userId', updateUser);
 authRouter.delete('/delete-user', verifyAdmin, deleteUser);
 authRouter.patch('/reset-password', authenticate, resetPassword);
 
