@@ -34,7 +34,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
     restart: unless-stopped
@@ -45,3 +45,4 @@ networks:
 
 volumes:
   postgres-data:
+    driver: local
