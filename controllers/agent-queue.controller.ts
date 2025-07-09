@@ -8,7 +8,7 @@ export const fetchAgentQueueController = async (req: AuthenticatedRequest, res: 
 
     try {
         const user = req.user;
-        const { from, to, count, page, nextPageToken } = req.body;
+        const { from, to, count, page, queue, agent, nextPageToken } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -18,7 +18,7 @@ export const fetchAgentQueueController = async (req: AuthenticatedRequest, res: 
             return next(Object.assign(new Error('Date missing'), { status: 404 }));
         }
 
-        const result = await fetchAgentQueue(user, from, to, count, page, nextPageToken);
+        const result = await fetchAgentQueue(user, from, to, count, page, queue, agent, nextPageToken);
 
         res.status(200).json({ success: true, data: result })
     } catch (err) {
@@ -79,7 +79,7 @@ export const AbandonedCallsController = async (req: AuthenticatedRequest, res: R
 
     try {
         const user = req.user;
-        const { from, to, count, page, nextPageToken } = req.body;
+        const { from, to, count, page, queue, direction, nextPageToken } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -89,7 +89,7 @@ export const AbandonedCallsController = async (req: AuthenticatedRequest, res: R
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await getAbandonedCalls(user, from, to, count, page, nextPageToken);
+        const result = await getAbandonedCalls(user, from, to, count, page, queue, direction, nextPageToken);
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {

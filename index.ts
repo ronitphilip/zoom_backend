@@ -7,7 +7,7 @@ import initializeSequelize from './config/db';
 import initModels from './models';
 import { runAutoUpdates } from './utils/autoUpdate';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 9847;
 
 const startServer = async () => {
   try {

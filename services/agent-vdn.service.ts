@@ -59,12 +59,10 @@ export const fetchFlowData = async (
         const totalDbRecords = await AgentQueue.count({ where: whereClause });
 
         if (existingData.length > 0 && existingData.length >= count) {
-            const users = await listAllUsers(user);
             return {
                 reports: existingData,
                 nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
                 totalRecords: totalDbRecords,
-                agents: users,
             };
         }
 
@@ -77,7 +75,7 @@ export const fetchFlowData = async (
         if (nextPageToken && !nextPageToken.startsWith('db_page_')) {
             queryParams.append('next_page_token', nextPageToken);
         }
-        
+
         const token = await getAccessToken(user.id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
 
@@ -235,9 +233,14 @@ export const getFlowIntervalReport = async (
             raw: true,
         });
 
-        const totalRecords = await AgentQueue.count({
-            where: whereClause,
-        });
+        const totalRecords = (
+            await AgentQueue.findAll({
+                where: whereClause,
+                attributes: [[groupByExpression, 'date'], 'flow_id', 'flow_name'],
+                group: [groupByExpression, 'flow_id', 'flow_name'],
+                raw: true,
+            })
+        ).length;
 
         const formattedResults: DetailedFlowReport[] = results.map((result: any) => {
             const totalCalls = Number(result.totalOffered) || 0;
@@ -267,13 +270,10 @@ export const getFlowIntervalReport = async (
             };
         });
 
-        const users = await listAllUsers(user);
-
         return {
             reports: formattedResults,
             nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
             totalRecords,
-            agents: users,
         };
     } catch (err) {
         throw err;
@@ -293,19 +293,6 @@ export const getDailyFlowReport = async (
     try {
         const result = await getFlowIntervalReport(user, from, to, count, page, '60', nextPageToken, flowId, flowName);
         return result;
-    } catch (err) {
-        throw err;
-    }
-};
-
-const listAllUsers = async (user: AuthenticatedPayload) => {
-    try {
-        const token = await getAccessToken(user.id);
-        if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
-
-        const result = await commonAPI("GET", '/contact_center/users', {}, {}, token);
-
-        return result.users?.map((user: any) => user.display_name);
     } catch (err) {
         throw err;
     }
@@ -453,9 +440,14 @@ export const refreshAgentQueueData = async (
             raw: true,
         });
 
-        const totalRecords = await AgentQueue.count({
-            where: whereClause,
-        });
+        const totalRecords = (
+            await AgentQueue.findAll({
+                where: whereClause,
+                attributes: [[groupByExpression, 'date'], 'flow_id', 'flow_name'],
+                group: [groupByExpression, 'flow_id', 'flow_name'],
+                raw: true,
+            })
+        ).length;
 
         const formattedResults: DetailedFlowReport[] = results.map((result: any) => {
             const totalCalls = Number(result.totalOffered) || 0;

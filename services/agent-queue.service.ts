@@ -85,12 +85,32 @@ export const fetchAgentQueue = async (
     to: string,
     count: number,
     page: number = 1,
+    queue?: string,
+    agent?: string,
     nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
         const offset = (page - 1) * count;
         const whereClause: any = {
             start_time: { [Op.between]: [from, to] },
         };
+
+        if (queue) {
+            whereClause.queue_name = queue
+        }
+
+        if (agent) {
+            whereClause.display_name = agent
+        }
+
+        const data = await AgentQueue.findAll({
+            where: whereClause,
+            attributes: ['engagement_id'],
+            limit: 1,
+        });
+
+        if (data.length === 0) {
+            await fetchData(user, from, to, count, page, nextPageToken)
+        }
 
         const existingData = await AgentQueue.findAll({
             where: whereClause,
@@ -123,17 +143,12 @@ export const fetchAgentQueue = async (
         const totalDbRecords = await AgentQueue.count({ where: whereClause });
         const users = await listAllUsers(user);
 
-        if (existingData.length > 0 && existingData.length >= count) {
-            return {
-                reports: existingData,
-                nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
-                totalRecords: totalDbRecords,
-                agents: users
-            };
-        }
-
-        return await fetchData(user, from, to, count, page, nextPageToken);
-
+        return {
+            reports: existingData,
+            nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
+            totalRecords: totalDbRecords,
+            agents: users
+        };
     } catch (err) {
         throw err;
     }
@@ -253,7 +268,20 @@ export const getQueueReport = async (
 
         const totalRecords = await AgentQueue.count({
             where: whereClause,
+            attributes: [
+                [groupByExpression, 'date'],
+                [col('cc_queue_id'), 'queueId'],
+                [col('queue_name'), 'queueName'],
+            ],
+            group: [
+                groupByExpression,
+                'cc_queue_id',
+                'queue_name',
+            ],
+            distinct: true,
         });
+
+        const totalRecordsCount = Array.isArray(totalRecords) ? totalRecords.length : totalRecords;
 
         const formattedResults: DetailedQueueReport[] = results.map((result: any) => ({
             date: result.date,
@@ -273,13 +301,10 @@ export const getQueueReport = async (
             digitalInteractions: Number(result.digitalInteractions) || 0,
         }));
 
-        const users = await listAllUsers(user);
-
         return {
             reports: formattedResults,
-            nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
-            totalRecords,
-            agents: users,
+            nextPageToken: page * count < totalRecordsCount ? `db_page_${page + 1}` : undefined,
+            totalRecords: totalRecordsCount,
         };
     } catch (err) {
         throw err;
@@ -292,13 +317,27 @@ export const getAbandonedCalls = async (
     to: string,
     count: number,
     page: number = 1,
-    nextPageToken?: string): Promise<AbandonedCall[]> => {
+    queue?: string,
+    direction?: string,
+    nextPageToken?: string): Promise<AgentQueueReponse> => {
     try {
+
+        const offset = (page - 1) * count;
+        const whereClause: any = {
+            start_time: { [Op.between]: [from, to] },
+            handling_duration: 0,
+        };
+
+        if (queue) {
+            whereClause.queue_name = queue;
+        }
+
+        if (direction) {
+            whereClause.direction = direction;
+        }
+
         const existingData = await AgentQueue.findAll({
-            where: {
-                start_time: { [Op.between]: [from, to] },
-                handling_duration: 0
-            },
+            where: whereClause,
             attributes: ['engagement_id'],
             limit: 1,
         });
@@ -308,10 +347,7 @@ export const getAbandonedCalls = async (
         }
 
         const results = await AgentQueue.findAll({
-            where: {
-                start_time: { [Op.between]: [from, to] },
-                handling_duration: 0
-            },
+            where: whereClause,
             attributes: [
                 [fn('TO_CHAR', literal('CAST("start_time" AS TIMESTAMP)'), literal("'YYYY-MM-DD HH24:MI:SS'")), 'startTime'],
                 'engagement_id',
@@ -322,9 +358,15 @@ export const getAbandonedCalls = async (
                 'queue_name',
                 'channel',
                 'queue_wait_type',
-                'waiting_duration'
+                'waiting_duration',
             ],
+            limit: count,
+            offset,
             raw: true,
+        });
+
+        const totalRecords = await AgentQueue.count({
+            where: whereClause,
         });
 
         const formattedResults: AbandonedCall[] = results.map((result: any) => ({
@@ -340,7 +382,11 @@ export const getAbandonedCalls = async (
             waitingDuration: Number(result.waiting_duration) || 0
         }));
 
-        return formattedResults;
+        return {
+            reports: formattedResults,
+            nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
+            totalRecords,
+        };
     } catch (err) {
         throw err;
     }

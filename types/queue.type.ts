@@ -4,10 +4,10 @@ export interface QueueResponse {
 }
 
 export interface AgentQueueReponse {
-    reports: QueueAttributes[] | AgentAbandonedReport[] | DetailedFlowReport[];
+    reports: QueueAttributes[] | AgentAbandonedReport[] | DetailedFlowReport[] | AbandonedCall[];
     nextPageToken: string | undefined;
     totalRecords: number,
-    agents?: string[],
+    agents?: string[]
 }
 
 export interface QueueAttributes {
