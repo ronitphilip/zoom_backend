@@ -356,7 +356,8 @@ export const fetchAgentEngagement = async (
 export const refreshAgentPerformance = async (
     user: AuthenticatedPayload,
     from: string,
-    to: string
+    to: string,
+    count?: string,
 ): Promise<{ data: PerformanceAttributes[], nextPageToken?: string, totalRecords: number }> => {
     try {
         const token = await getAccessToken(user.id);
@@ -444,58 +445,24 @@ export const refreshAgentPerformance = async (
 
             try {
                 await AgentPerformance.bulkCreate(validatedData, {
-                    updateOnDuplicate: [
-                        'start_time',
-                        'end_time',
-                        'direction',
-                        'user_id',
-                        'user_name',
-                        'channel',
-                        'channel_source',
-                        'queue_id',
-                        'queue_name',
-                        'team_id',
-                        'team_name',
-                        'handled_count',
-                        'handle_duration',
-                        'direct_transfer_count',
-                        'warm_transfer_initiated_count',
-                        'warm_transfer_completed_count',
-                        'transfer_initiated_count',
-                        'transfer_completed_count',
-                        'warm_conference_count',
-                        'agent_offered_count',
-                        'agent_refused_count',
-                        'agent_missed_count',
-                        'ring_disconnect_count',
-                        'agent_declined_count',
-                        'agent_message_sent_count',
-                        'hold_count',
-                        'conference_count',
-                        'wrap_up_duration',
-                        'outbound_handled_count',
-                        'outbound_handle_duration',
-                        'dial_duration',
-                        'conversation_duration',
-                        'outbound_conversation_duration',
-                    ],
-                    validate: true, // Enable validation to catch schema mismatches
+                    ignoreDuplicates: true,
+                    validate: true,
                 });
                 console.log(`Successfully upserted ${validatedData.length} records to AgentPerformance`);
             } catch (bulkError) {
                 console.error('Failed to upsert data in AgentPerformance table:', bulkError);
             }
 
-            // Verify the number of records in the table
-            const savedRecords = await AgentPerformance.count({
-                where: {
-                    start_time: { [Op.between]: [from, to] },
-                },
-            });
-            console.log(`Total records in AgentPerformance after upsert: ${savedRecords}`);
         } else {
             console.warn('No data fetched from API to upsert');
         }
+
+        const savedRecords = await AgentPerformance.count({
+            where: {
+                start_time: { [Op.between]: [from, to] },
+            },
+        });
+        console.log(`Total records in AgentPerformance after upsert: ${savedRecords}`);
 
         // Transform data for return
         const transformedData = apiData.map((item: any) => ({
@@ -512,9 +479,10 @@ export const refreshAgentPerformance = async (
             agent_offered_count: item.agent_offered_count,
         }));
 
+        const recordCount = count && !isNaN(parseInt(count)) ? parseInt(count) : transformedData.length;
         return {
-            data: transformedData.slice(0, 10) as PerformanceAttributes[],
-            totalRecords,
+            data: transformedData.slice(0, recordCount) as PerformanceAttributes[],
+            totalRecords: savedRecords,
         };
     } catch (err) {
         console.error('Error in refreshAgentPerformance:', err);
@@ -525,7 +493,8 @@ export const refreshAgentPerformance = async (
 export const refreshTimeCard = async (
     user: AuthenticatedPayload,
     from: string,
-    to: string
+    to: string,
+    count?: string,
 ): Promise<{ data: TimecardAttributes[], nextPageToken?: string, totalRecords: number }> => {
     try {
         const token = await getAccessToken(user.id);
@@ -583,8 +552,9 @@ export const refreshTimeCard = async (
             occupied_duration: item.occupied_duration || null,
         }));
 
+        const recordCount = count && !isNaN(parseInt(count)) ? parseInt(count) : transformedData.length;
         return {
-            data: transformedData.slice(0, 10) as TimecardAttributes[],
+            data: transformedData.slice(0, recordCount) as TimecardAttributes[],
             totalRecords,
         };
     } catch (err) {
@@ -688,7 +658,8 @@ export const refreshGroupSummary = async (
 export const refreshAgentEngagement = async (
     user: AuthenticatedPayload,
     from: string,
-    to: string
+    to: string,
+    count?: string
 ): Promise<{ data: AgentEngagementAttributes[], nextPageToken?: string, totalRecords: number }> => {
     try {
         const token = await getAccessToken(user.id);
@@ -786,8 +757,9 @@ export const refreshAgentEngagement = async (
             abandoned_count: item.abandoned_count,
         }));
 
+        const recordCount = count && !isNaN(parseInt(count)) ? parseInt(count) : transformedData.length;
         return {
-            data: transformedData.slice(0, 10) as AgentEngagementAttributes[],
+            data: transformedData.slice(0, recordCount) as AgentEngagementAttributes[],
             totalRecords,
         };
     } catch (err) {

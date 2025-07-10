@@ -39,7 +39,7 @@ export const RefreshAgentPerformanceController = async (req: AuthenticatedReques
 
     try {
         const user = req.user;
-        const { from, to } = req.body;
+        const { from, to, count } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -49,7 +49,7 @@ export const RefreshAgentPerformanceController = async (req: AuthenticatedReques
             return next(Object.assign(new Error('Date missing'), { status: 409 }));
         }
 
-        const result = await refreshAgentPerformance(user, from, to);
+        const result = await refreshAgentPerformance(user, from, to, count);
         const agents = await listAllUsers(user);
 
         const response = {
@@ -162,7 +162,7 @@ export const RefreshTimeCardController = async (req: AuthenticatedRequest, res: 
 
     try {
         const user = req.user;
-        const { from, to } = req.body;
+        const { from, to, count } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -172,7 +172,7 @@ export const RefreshTimeCardController = async (req: AuthenticatedRequest, res: 
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await refreshTimeCard(user, from, to);
+        const result = await refreshTimeCard(user, from, to, count);
         const agents = await listAllUsers(user);
 
         const response = {
@@ -222,7 +222,7 @@ export const RefreshAgentEngagementController = async (req: AuthenticatedRequest
 
     try {
         const user = req.user;
-        const { from, to } = req.body;
+        const { from, to, count } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -232,7 +232,7 @@ export const RefreshAgentEngagementController = async (req: AuthenticatedRequest
             return next(Object.assign(new Error('Date missing'), { status: 409 }));
         }
 
-        const result = await refreshAgentEngagement(user, from, to);
+        const result = await refreshAgentEngagement(user, from, to, count);
         const agents = await listAllUsers(user);
 
         const response = {

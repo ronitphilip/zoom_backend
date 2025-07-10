@@ -5,24 +5,106 @@ import { AuthenticatedPayload } from "../types/user.type";
 import { getAccessToken } from "../utils/accessToken";
 import { AgentQueue } from "../models/agent-queue.model";
 
-export const fetchData = async (user: AuthenticatedPayload, from: string, to: string, count: number, page: number = 1, nextPageToken?: string): Promise<AgentQueueReponse> => {
+export const fetchData = async (user: AuthenticatedPayload, from: string, to: string, count?: number): Promise<AgentQueueReponse> => {
     try {
         const token = await getAccessToken(user.id);
         if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
 
-        const queryParams = new URLSearchParams({
-            from,
-            to,
-            page_size: count.toString(),
-        });
+        console.log(`Starting fetchData for period ${from} to ${to}`);
 
-        if (nextPageToken && !nextPageToken.startsWith('db_page_')) {
-            queryParams.append('next_page_token', nextPageToken);
+        let apiData: any[] = [];
+        let nextPageToken: string | undefined;
+        const pageSize = count || 300;
+
+        // Fetch all pages from the API
+        do {
+            const queryParams = new URLSearchParams({
+                from,
+                to,
+                page_size: pageSize.toString(),
+            });
+
+            if (nextPageToken) {
+                queryParams.append('next_page_token', nextPageToken);
+            }
+
+            console.log(`Fetching API data with params: ${queryParams.toString()}`);
+            const result = await commonAPI(
+                "GET",
+                `/contact_center/engagements?${queryParams.toString()}`,
+                {},
+                {},
+                token
+            );
+
+            if (!result.engagements || !Array.isArray(result.engagements)) {
+                console.warn(`API returned no engagements or invalid data: ${JSON.stringify(result)}`);
+                break;
+            }
+
+            console.log(`Received ${result.engagements.length} records from API`);
+            apiData = [...apiData, ...result.engagements];
+            nextPageToken = result.next_page_token;
+
+        } while (nextPageToken);
+
+        const totalRecords = apiData.length;
+        console.log(`Total records fetched from API: ${totalRecords}`);
+
+        if (apiData.length > 0) {
+            // Flatten and validate data to match model schema
+            const flattenedData = apiData.map((item: any) => ({
+                engagement_id: item.engagement_id || '',
+                direction: item.direction || '',
+                start_time: item.start_time || '',
+                end_time: item.end_time || '',
+                channel_types: Array.isArray(item.channel_types) ? item.channel_types.join(',') : item.channel_types || '',
+                consumer_number: item.consumers?.[0]?.consumer_number || '',
+                consumer_id: item.consumers?.[0]?.consumer_id || '',
+                consumer_display_name: item.consumers?.[0]?.consumer_display_name || '',
+                flow_id: item.flows?.[0]?.flow_id || '',
+                flow_name: item.flows?.[0]?.flow_name || '',
+                cc_queue_id: item.queues?.[0]?.cc_queue_id || '',
+                queue_name: item.queues?.[0]?.queue_name || '',
+                user_id: item.agents?.[0]?.user_id || '',
+                display_name: item.agents?.[0]?.display_name || '',
+                channel: item.channels?.[0]?.channel || '',
+                channel_source: item.channels?.[0]?.channel_source || '',
+                queue_wait_type: item.queue_wait_type || '',
+                duration: item.duration || 0,
+                flow_duration: item.flow_duration || 0,
+                waiting_duration: item.waiting_duration || 0,
+                handling_duration: item.handling_duration || 0,
+                wrap_up_duration: item.wrap_up_duration || 0,
+                voice_mail: item.voice_mail || 0,
+                talk_duration: item.talk_duration || 0,
+                transferCount: item.transferCount || 0,
+            }));
+
+            try {
+                await AgentQueue.bulkCreate(flattenedData, {
+                    ignoreDuplicates: true,
+                    validate: true,
+                });
+                console.log(`Successfully upserted ${flattenedData.length} records to AgentQueue`);
+            } catch (bulkError) {
+                console.error('Failed to upsert data in AgentQueue table:', bulkError);
+            }
+        } else {
+            console.warn('No data fetched from API to upsert');
         }
 
-        const result = await commonAPI("GET", `/contact_center/engagements?${queryParams.toString()}`, {}, {}, token);
+        const savedRecords = await AgentQueue.count({
+            where: {
+                start_time: { [Op.between]: [from, to] },
+            },
+        });
+        console.log(`Total records in AgentQueue after upsert: ${savedRecords}`);
 
-        const flattenedData = result.engagements?.map((item: any) => ({
+        const users = await listAllUsers(user);
+
+        // Transform data for return
+        const transformedData = apiData.map((item: any) => ({
             engagement_id: item.engagement_id,
             direction: item.direction,
             start_time: item.start_time,
@@ -50,21 +132,18 @@ export const fetchData = async (user: AuthenticatedPayload, from: string, to: st
             transferCount: item.transferCount,
         }));
 
-        await AgentQueue.bulkCreate(flattenedData, {
-            updateOnDuplicate: ['engagement_id'],
-        });
-        const users = await listAllUsers(user);
+        const recordCount = count && !isNaN(count) ? count : transformedData.length;
 
         return {
-            reports: flattenedData,
-            nextPageToken: result.next_page_token,
-            totalRecords: result.total_records,
+            reports: transformedData.slice(0, recordCount),
+            totalRecords: savedRecords,
             agents: users,
         };
     } catch (err) {
-        throw err
+        console.error('Error in fetchData:', err);
+        throw err;
     }
-}
+};
 
 export const listAllUsers = async (user: AuthenticatedPayload) => {
     try {
@@ -86,8 +165,7 @@ export const fetchAgentQueue = async (
     count: number,
     page: number = 1,
     queue?: string,
-    agent?: string,
-    nextPageToken?: string): Promise<AgentQueueReponse> => {
+    agent?: string,): Promise<AgentQueueReponse> => {
     try {
         const offset = (page - 1) * count;
         const whereClause: any = {
@@ -109,7 +187,7 @@ export const fetchAgentQueue = async (
         });
 
         if (data.length === 0) {
-            await fetchData(user, from, to, count, page, nextPageToken)
+            await fetchData(user, from, to)
         }
 
         const existingData = await AgentQueue.findAll({
@@ -145,7 +223,6 @@ export const fetchAgentQueue = async (
 
         return {
             reports: existingData,
-            nextPageToken: page * count < totalDbRecords ? `db_page_${page + 1}` : undefined,
             totalRecords: totalDbRecords,
             agents: users
         };
@@ -162,7 +239,6 @@ export const getQueueReport = async (
     page: number = 1,
     grouping: 'daily' | 'interval',
     intervalMinutes?: '15' | '30' | '60',
-    nextPageToken?: string,
     queueId?: string
 ): Promise<AgentQueueReponse> => {
     try {
@@ -212,7 +288,7 @@ export const getQueueReport = async (
         });
 
         if (existingData.length === 0) {
-            await fetchData(user, from, to, count, page, nextPageToken);
+            await fetchData(user, from, to);
         }
 
         const offset = (page - 1) * count;
@@ -303,7 +379,6 @@ export const getQueueReport = async (
 
         return {
             reports: formattedResults,
-            nextPageToken: page * count < totalRecordsCount ? `db_page_${page + 1}` : undefined,
             totalRecords: totalRecordsCount,
         };
     } catch (err) {
@@ -318,8 +393,7 @@ export const getAbandonedCalls = async (
     count: number,
     page: number = 1,
     queue?: string,
-    direction?: string,
-    nextPageToken?: string): Promise<AgentQueueReponse> => {
+    direction?: string): Promise<AgentQueueReponse> => {
     try {
 
         const offset = (page - 1) * count;
@@ -343,7 +417,7 @@ export const getAbandonedCalls = async (
         });
 
         if (existingData.length === 0) {
-            await fetchData(user, from, to, count, page, nextPageToken);
+            await fetchData(user, from, to);
         }
 
         const results = await AgentQueue.findAll({
@@ -384,7 +458,6 @@ export const getAbandonedCalls = async (
 
         return {
             reports: formattedResults,
-            nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
             totalRecords,
         };
     } catch (err) {
@@ -398,7 +471,6 @@ export const getAgentAbandonedReport = async (
     to: string,
     count: number,
     page: number = 1,
-    nextPageToken?: string,
     queueId?: string,
     username?: string,
 ): Promise<AgentQueueReponse> => {
@@ -424,7 +496,7 @@ export const getAgentAbandonedReport = async (
         });
 
         if (existingData.length === 0) {
-            await fetchData(user, from, to, count, page, nextPageToken);
+            await fetchData(user, from, to);
         }
 
         const offset = (page - 1) * count;
@@ -478,7 +550,6 @@ export const getAgentAbandonedReport = async (
 
         return {
             reports: formattedResults,
-            nextPageToken: page * count < totalRecords ? `db_page_${page + 1}` : undefined,
             totalRecords,
             agents: users,
         };

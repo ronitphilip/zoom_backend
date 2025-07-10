@@ -4,11 +4,11 @@ import { fetchAgentQueue, fetchData, getAbandonedCalls, getAgentAbandonedReport,
 import { QueueResponse } from "../types/queue.type";
 
 export const fetchAgentQueueController = async (req: AuthenticatedRequest, res: Response<QueueResponse>, next: NextFunction) => {
-    console.log('fetchAgentQueues');
+    console.log('fetchAgentQueueController');
 
     try {
         const user = req.user;
-        const { from, to, count, page, queue, agent, nextPageToken } = req.body;
+        const { from, to, count, page, queue, agent } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -18,7 +18,7 @@ export const fetchAgentQueueController = async (req: AuthenticatedRequest, res: 
             return next(Object.assign(new Error('Date missing'), { status: 404 }));
         }
 
-        const result = await fetchAgentQueue(user, from, to, count, page, queue, agent, nextPageToken);
+        const result = await fetchAgentQueue(user, from, to, count, page, queue, agent);
 
         res.status(200).json({ success: true, data: result })
     } catch (err) {
@@ -30,7 +30,7 @@ export const getDailyQueueController = async (req: AuthenticatedRequest, res: Re
     console.log('getDailyQueueController');
     try {
         const user = req.user;
-        const { from, to, count, page, nextPageToken, queueId } = req.body;
+        const { from, to, count, page, queueId } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -40,7 +40,7 @@ export const getDailyQueueController = async (req: AuthenticatedRequest, res: Re
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await getQueueReport(user, from, to, count, page, 'daily', undefined, nextPageToken, queueId);
+        const result = await getQueueReport(user, from, to, count, page, 'daily', undefined, queueId);
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {
@@ -52,7 +52,7 @@ export const getIntervalQueueController = async (req: AuthenticatedRequest, res:
     console.log('getIntervalQueueController');
     try {
         const user = req.user;
-        const { from, to, interval, count, page, nextPageToken, queueId } = req.body;
+        const { from, to, interval, count, page, queueId } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -66,7 +66,7 @@ export const getIntervalQueueController = async (req: AuthenticatedRequest, res:
             return next(Object.assign(new Error("Interval must be 15min, 30min, or 1hr"), { status: 400 }));
         }
 
-        const result = await getQueueReport(user, from, to, count, page, 'interval', interval, nextPageToken, queueId);
+        const result = await getQueueReport(user, from, to, count, page, 'interval', interval, queueId);
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {
@@ -79,7 +79,7 @@ export const AbandonedCallsController = async (req: AuthenticatedRequest, res: R
 
     try {
         const user = req.user;
-        const { from, to, count, page, queue, direction, nextPageToken } = req.body;
+        const { from, to, count, page, queue, direction } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -89,7 +89,7 @@ export const AbandonedCallsController = async (req: AuthenticatedRequest, res: R
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await getAbandonedCalls(user, from, to, count, page, queue, direction, nextPageToken);
+        const result = await getAbandonedCalls(user, from, to, count, page, queue, direction);
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {
@@ -101,7 +101,7 @@ export const AgentAbandonedReportController = async (req: AuthenticatedRequest, 
     console.log('AgentAbandonedReportController');
     try {
         const user = req.user;
-        const { from, to, count, page, nextPageToken, queueId, username } = req.body;
+        const { from, to, count, page, queueId, username } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
@@ -111,7 +111,7 @@ export const AgentAbandonedReportController = async (req: AuthenticatedRequest, 
             return next(Object.assign(new Error("Date missing"), { status: 400 }));
         }
 
-        const result = await getAgentAbandonedReport(user, from, to, count, page, nextPageToken, queueId, username);
+        const result = await getAgentAbandonedReport(user, from, to, count, page, queueId, username);
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {
@@ -124,7 +124,7 @@ export const RefreshQueueController = async (req: AuthenticatedRequest, res: Res
     
     try {
         const user = req.user;
-        const { from, to, count, page, nextPageToken } = req.body;
+        const { from, to, count } = req.body;
 
         if (!user) {
             return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
@@ -134,7 +134,7 @@ export const RefreshQueueController = async (req: AuthenticatedRequest, res: Res
             return next(Object.assign(new Error('Date missing'), { status: 404 }));
         }
 
-        const result = await fetchData(user, from, to, count, page, nextPageToken);
+        const result = await fetchData(user, from, to, count);
 
         res.status(200).json({ success: true, data: result })
     } catch (err) {

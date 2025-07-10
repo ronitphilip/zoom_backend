@@ -15,7 +15,6 @@ export const DashboardController = async (req: AuthenticatedRequest, res: Respon
         if (!from || !to) {
             return next(Object.assign(new Error('Date missing'), { status: 404 }));
         }
-
         
     } catch (err) {
         next(err);

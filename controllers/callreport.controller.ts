@@ -149,7 +149,3 @@ export const RawCallLogs = async (req: AuthenticatedRequest, res: Response<CallL
     next(err)
   }
 }
-
-export const ZoomCredentials = () => {
-  
-}
