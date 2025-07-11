@@ -1,4 +1,4 @@
-import { Op, fn, col, literal } from "sequelize";
+import { Op } from "sequelize";
 import { AgentPerformance } from "../models/agent-performance.model";
 import { AgentTimecard } from "../models/agent-timecard.model";
 import { AuthenticatedPayload } from "../types/user.type";
