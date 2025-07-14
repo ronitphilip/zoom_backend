@@ -1,8 +1,8 @@
-import { Op } from "sequelize";
+import { col, fn, Op } from "sequelize";
 import { AgentPerformance } from "../models/agent-performance.model";
 import { AgentTimecard } from "../models/agent-timecard.model";
 import { AuthenticatedPayload } from "../types/user.type";
-import { PerformanceAttributes, TimecardAttributes, TeamReportSummary, AgentEngagementAttributes } from "../types/zoom.type";
+import { PerformanceAttributes, TimecardAttributes, TeamReportSummary, AgentEngagementAttributes, AgentLoginReport } from "../types/zoom.type";
 import { getAccessToken } from "../utils/accessToken";
 import commonAPI from "../config/commonAPI";
 import { Team } from "../models/team.model";
@@ -766,3 +766,127 @@ export const refreshAgentEngagement = async (
         throw err;
     }
 };
+
+export const getAgentLoginReport = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    format: string,
+    count: number,
+    page: number = 1,
+    agent?: string,
+): Promise<{ reports: AgentLoginReport[], totalRecords: number, users: string[] }> => {
+    try {
+        const whereClause: any = {
+            start_time: { [Op.between]: [from, to] },
+        };
+
+        if (agent) whereClause.user_name = agent;
+
+        const existingData = await AgentTimecard.findAll({
+            where: whereClause,
+            attributes: ['work_session_id'],
+            limit: 1,
+        });
+
+        if (existingData.length === 0) {
+            await refreshgetAgentLogin(user, from, to, 300);
+        }
+
+        const offset = (page - 1) * count;
+
+        const data = await AgentTimecard.findAll({
+            where: whereClause,
+            attributes: [
+                'user_name',
+                'work_session_id',
+                [fn('MIN', col('start_time')), 'login_time'],
+                [fn('MAX', col('end_time')), 'logout_time'],
+            ],
+            group: ['user_name', 'work_session_id'],
+            order: [[col('login_time'), format]],
+            limit: count,
+            offset,
+            raw: true,
+        }) as unknown as AgentLoginReport[];
+
+        const totalRecords = await AgentTimecard.count({
+            where: whereClause,
+            distinct: true,
+            col: 'work_session_id',
+        });
+
+        const transformedData: AgentLoginReport[] = data.map(record => {
+            const loginTime = new Date(record.login_time);
+            const logoutTime = new Date(record.logout_time);
+            const duration = logoutTime.getTime() - loginTime.getTime();
+            return {
+                user_name: record.user_name,
+                work_session_id: record.work_session_id,
+                login_time: record.login_time,
+                logout_time: record.logout_time,
+                duration,
+            };
+        });
+
+        const agents = await listAllUsers(user);
+
+        return {
+            reports: transformedData,
+            totalRecords,
+            users: agents
+        };
+    } catch (err) {
+        throw err;
+    }
+}
+
+export const refreshgetAgentLogin = async (
+    user: AuthenticatedPayload,
+    from: string,
+    to: string,
+    count: number,
+): Promise<{ reports: AgentLoginReport[], totalRecords: number, users: string[] }> => {
+    try {
+        const token = await getAccessToken(user.id);
+        if (!token) throw Object.assign(new Error("Server token missing"), { status: 401 });
+
+        let apiData: any[] = [];
+        let nextPageToken: string | undefined;
+        const pageSize = 300;
+
+        do {
+            const queryParams = new URLSearchParams({
+                from,
+                to,
+                page_size: pageSize.toString(),
+            });
+
+            if (nextPageToken) {
+                queryParams.append('next_page_token', nextPageToken);
+            }
+
+            const response = await commonAPI(
+                "GET",
+                `/contact_center/analytics/dataset/historical/agent_timecard?${queryParams.toString()}`,
+                {},
+                {},
+                token
+            );
+
+            apiData = [...apiData, ...(response.users || [])];
+            nextPageToken = response.next_page_token;
+
+        } while (nextPageToken);
+
+        if (apiData.length > 0) {
+            await AgentTimecard.bulkCreate(apiData, {
+                ignoreDuplicates: true,
+            });
+        }
+
+        return getAgentLoginReport(user, from, to, 'DESC', count, 1)
+    } catch (err) {
+        throw err;
+    }
+}

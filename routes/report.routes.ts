@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth';
-import { AgentPerfomanceController, TimeCardController, GroupSummaryController, AgentEngagementController, RefreshAgentPerformanceController, RefreshAgentEngagementController, RefreshGroupSummaryController, RefreshTimeCardController } from '../controllers/agent.controller';
+import { AgentPerfomanceController, TimeCardController, GroupSummaryController, AgentEngagementController, RefreshAgentPerformanceController, RefreshAgentEngagementController, RefreshGroupSummaryController, RefreshTimeCardController, AgentLoginReportController, RefreshAgentLoginController } from '../controllers/agent.controller';
 
 const reportRouter = Router();
 
@@ -12,5 +12,7 @@ reportRouter.post('/refresh/agent-perfomance', authenticate, RefreshAgentPerform
 reportRouter.post('/refresh/time-card', authenticate, RefreshTimeCardController);
 reportRouter.post('/refresh/group-summary', authenticate, RefreshGroupSummaryController);
 reportRouter.post('/refresh/agent-engagement', authenticate, RefreshAgentEngagementController);
+reportRouter.post('/agent-login-report', authenticate, AgentLoginReportController);
+reportRouter.post('/refresh/agent-login-report', authenticate, RefreshAgentLoginController);
 
 export default reportRouter;

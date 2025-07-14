@@ -44,6 +44,14 @@ export interface ReportResponse {
   data: PerformanceAttributes[] | TimecardAttributes[] | AgentEngagementAttributes[] | any
 }
 
+export interface AgentLoginReport {
+  user_name: string;
+  work_session_id: string;
+  login_time: string;
+  logout_time: string;
+  duration?: number;
+}
+
 export interface PerformanceAttributes {
   engagement_id?: string;
   start_time?: string;

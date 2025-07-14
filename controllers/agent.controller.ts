@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { ReportResponse } from "../types/zoom.type";
-import { fetchAgentEngagement, fetchAgentPerformance, fetchAllTeams, fetchTimeCard, generateGroupSummary, listAllUsers, refreshAgentEngagement, refreshAgentPerformance, refreshGroupSummary, refreshTimeCard } from "../services/report.service";
+import { fetchAgentEngagement, fetchAgentPerformance, fetchAllTeams, fetchTimeCard, generateGroupSummary, getAgentLoginReport, listAllUsers, refreshAgentEngagement, refreshAgentPerformance, refreshgetAgentLogin, refreshGroupSummary, refreshTimeCard } from "../services/report.service";
 
 export const AgentPerfomanceController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
     console.log('AgentPerfomanceController');
@@ -247,3 +247,49 @@ export const RefreshAgentEngagementController = async (req: AuthenticatedRequest
         next(err);
     }
 };
+
+export const AgentLoginReportController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
+    console.log('AgentLoginReportController');
+    
+    try {
+        const user = req.user;
+        const { from, to, agent, format, count, page } = req.body;
+
+        if (!user) {
+            return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
+        }
+
+        if (!from || !to) {
+            return next(Object.assign(new Error("Date missing"), { status: 400 }));
+        }
+
+        const result = await getAgentLoginReport(user, from, to, format, count, page, agent);
+
+        res.status(200).json({success: true, data: result})
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const RefreshAgentLoginController = async (req: AuthenticatedRequest, res: Response<ReportResponse>, next: NextFunction) => {
+    console.log('RefreshAgentLoginController');
+    
+    try {
+        const user = req.user;
+        const { from, to, count } = req.body;
+
+        if (!user) {
+            return next(Object.assign(new Error("Unauthorized"), { status: 401 }));
+        }
+
+        if (!from || !to) {
+            return next(Object.assign(new Error("Date missing"), { status: 400 }));
+        }
+
+        const result = await refreshgetAgentLogin(user, from, to, count);
+
+        res.status(200).json({success: true, data: result})
+    } catch (err) {
+        next(err)
+    }
+}
